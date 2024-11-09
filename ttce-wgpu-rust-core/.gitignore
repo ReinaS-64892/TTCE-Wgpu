@@ -1,0 +1,8 @@
+*/obj/*
+*/target/*
+
+/.vscode
+
+# Added by cargo
+
+/target

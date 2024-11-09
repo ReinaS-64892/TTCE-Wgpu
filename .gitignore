@@ -1,0 +1,9 @@
+.vscode
+
+TTCE-Wgpu.Test/TestData
+
+**/target/*
+**/bin/*
+**/obj/*
+
+ProjectPackages

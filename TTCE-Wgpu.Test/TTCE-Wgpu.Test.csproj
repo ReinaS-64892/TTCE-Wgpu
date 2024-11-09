@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>net.rs64.TexTransCoreEngineForWgpu</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
+    <ProjectReference Include="..\TTCE-Wgpu\TTCE-Wgpu.csproj" />
+    <ProjectReference Include="..\TexTransTool.csproj\net.rs64.tex-trans-core\net.rs64.tex-trans-core.csproj"/>
+  </ItemGroup>
+
+</Project>

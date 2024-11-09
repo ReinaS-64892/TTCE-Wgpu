@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <!-- <TargetFramework>net7.0</TargetFramework> -->
+    <!-- <RootNamespace>net.rs64.TexTransCoreEngineForWgpu</RootNamespace> -->
+    <AssemblyName>net.rs64.ttce-wgpu</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>Nullable</WarningsAsErrors>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OutDir>bin</OutDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <Target Name="Rust Cargo Build" BeforeTargets="Compile">
+    <Exec Command="cargo build" WorkingDirectory="..\ttce-wgpu-rust-core" />
+  </Target>
+
+  <ItemGroup>
+    <Content Include="..\ttce-wgpu-rust-core\target\debug\ttce_wgpu_rust_core.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TexTransTool.csproj\net.rs64.tex-trans-core\net.rs64.tex-trans-core.csproj"/>
+  </ItemGroup>
+
+</Project>
