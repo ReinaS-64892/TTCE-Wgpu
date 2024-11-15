@@ -3,10 +3,9 @@ mod render_texture;
 mod tex_trans_core_engine;
 
 use std::{
-    default,
     ffi::c_void,
     ops::Deref,
-    sync::{atomic::AtomicPtr, Mutex},
+    sync::Mutex,
 };
 
 use compute_shader::{TTComputeHandler, TTComputeShaderID};
