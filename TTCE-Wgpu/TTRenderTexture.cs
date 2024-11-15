@@ -1,83 +1,86 @@
+using System;
 using System.Runtime.InteropServices;
 using net.rs64.TexTransCore;
-namespace net.rs64.TexTransCoreEngineForWgpu;
-public sealed class TTRenderTexture : IDisposable, ITTRenderTexture
+namespace net.rs64.TexTransCoreEngineForWgpu
 {
-    TTCEWgpu _engineContext;
-    TTRenderTextureHandler _handler;
-    TexTransCore.TexTransCoreTextureChannel _channel;
-
-    string _name;
-
-    public int Width => (int)GetWidth();
-
-    public int Hight => (int)GetHeight();
-
-
-    public string Name { get => _name; set => _name = value; }
-
-    public TexTransCore.TexTransCoreTextureChannel ContainsChannel => _channel;
-
-    internal TTRenderTexture(TTCEWgpu engineContext, TTRenderTextureHandler handle, TexTransCore.TexTransCoreTextureChannel channel)
+    public sealed class TTRenderTexture : IDisposable, ITTRenderTexture
     {
-        _engineContext = engineContext;
-        _handler = handle;
-        _name = "TTRenderTexture-Wgpu";
-        _channel = channel;
-    }
+        TTCEWgpu _engineContext;
+        TTRenderTextureHandler _handler;
+        TexTransCore.TexTransCoreTextureChannel _channel;
 
-    public uint GetWidth()
-    {
-        if (_handler.IsInvalid) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
+        string _name;
 
-        unsafe
+        public int Width => (int)GetWidth();
+
+        public int Hight => (int)GetHeight();
+
+
+        public string Name { get => _name; set => _name = value; }
+
+        public TexTransCore.TexTransCoreTextureChannel ContainsChannel => _channel;
+
+        internal TTRenderTexture(TTCEWgpu engineContext, TTRenderTextureHandler handle, TexTransCore.TexTransCoreTextureChannel channel)
         {
-            return NativeMethod.get_width((void*)_handler.DangerousGetHandle());
-        }
-    }
-    public uint GetHeight()
-    {
-        if (_handler.IsInvalid) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
-
-        unsafe
-        {
-            return NativeMethod.get_height((void*)_handler.DangerousGetHandle());
-        }
-    }
-
-    internal IntPtr GetPtr()
-    {
-        if (_handler.IsInvalid) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
-
-        unsafe
-        {
-            return _handler.DangerousGetHandle();
+            _engineContext = engineContext;
+            _handler = handle;
+            _name = "TTRenderTexture-Wgpu";
+            _channel = channel;
         }
 
-    }
-
-    public void Dispose()
-    {
-        if (_handler != null && _handler.IsInvalid is false)
+        public uint GetWidth()
         {
-            _engineContext._renderTextures.Remove(this);
-            _handler.Dispose();
+            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
+
+            unsafe
+            {
+                return NativeMethod.get_width((void*)_handler.DangerousGetHandle());
+            }
         }
-        GC.SuppressFinalize(this);
-    }
-}
-class TTRenderTextureHandler : SafeHandle
-{
-    public TTRenderTextureHandler(IntPtr handle) : base(IntPtr.Zero, true)
-    {
-        SetHandle(handle);
-    }
+        public uint GetHeight()
+        {
+            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
 
-    public override bool IsInvalid => handle == IntPtr.Zero;
+            unsafe
+            {
+                return NativeMethod.get_height((void*)_handler.DangerousGetHandle());
+            }
+        }
 
-    protected override bool ReleaseHandle()
+        internal IntPtr GetPtr()
+        {
+            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
+
+            unsafe
+            {
+                return _handler.DangerousGetHandle();
+            }
+
+        }
+
+        public void Dispose()
+        {
+            if (_handler != null && _handler.IsInvalid is false)
+            {
+                _engineContext._renderTextures.Remove(this);
+                _handler.Dispose();
+            }
+            GC.SuppressFinalize(this);
+        }
+    }
+    class TTRenderTextureHandler : SafeHandle
     {
-        unsafe { NativeMethod.drop_render_texture((void*)handle); }
-        return true;
+        public TTRenderTextureHandler(IntPtr handle) : base(IntPtr.Zero, true)
+        {
+            SetHandle(handle);
+        }
+
+        public override bool IsInvalid => handle == IntPtr.Zero;
+
+        protected override bool ReleaseHandle()
+        {
+            unsafe { NativeMethod.drop_render_texture((void*)handle); }
+            return true;
+        }
     }
 }

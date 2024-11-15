@@ -69,12 +69,6 @@ internal class Program
         if (File.Exists(rustCoreDLLPath)) Console.WriteLine("Ok!");
         else { Console.WriteLine("Err!"); return; }
 
-
-        Console.Write("Managed DLL チェック ... ");
-        var managedDLLPath = Path.Combine(TTCE_WGPU, "bin", TTCE_WGPU_DLL);
-        if (File.Exists(managedDLLPath)) Console.WriteLine("Ok!");
-        else { Console.WriteLine("Err!"); return; }
-
         Console.Write("UnityPackageMetaData の存在確認 ... ");
         if (Directory.Exists(Path.Combine(TTCE_WGPU, UNITY_PACKAGE_META_DATA))) Console.WriteLine("Ok!");
         else { Console.WriteLine("Err!"); return; }
@@ -102,9 +96,16 @@ internal class Program
             File.Copy(filePath, Path.Combine(ttcePackagePath, Path.GetFileName(filePath)));
         }
         Console.WriteLine("");
+        Console.WriteLine("Copy Scripts");
+        foreach (var filePath in Directory.GetFiles(Path.Combine(TTCE_WGPU)))
+        {
+            if (Path.GetExtension(filePath) != ".cs") { continue; }
+
+            Console.Write($" {Path.GetFileName(filePath)} ");
+            File.Copy(filePath, Path.Combine(ttcePackagePath, Path.GetFileName(filePath)));
+        }
+        Console.WriteLine("");
         Console.WriteLine("Copy DLLs");
-        Console.Write($" {Path.GetFileName(managedDLLPath)} ");
-        File.Copy(managedDLLPath, Path.Combine(ttcePackagePath, Path.GetFileName(managedDLLPath)));
         Console.Write($" {Path.GetFileName(rustCoreDLLPath)} ");
         File.Copy(rustCoreDLLPath, Path.Combine(ttcePackagePath, Path.GetFileName(rustCoreDLLPath)));
 

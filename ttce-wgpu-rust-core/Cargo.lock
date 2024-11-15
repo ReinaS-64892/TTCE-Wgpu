@@ -843,6 +843,7 @@ dependencies = [
  "csbindgen",
  "hassle-rs",
  "naga",
+ "once_cell",
  "tokio",
  "wgpu",
 ]

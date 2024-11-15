@@ -50,6 +50,9 @@ impl TexTransCoreEngin {
     pub fn default_texture_format(&self) -> TexTransCoreTextureFormat {
         self.default_render_texture_format
     }
+    pub fn set_default_texture_format(&mut self, format: TexTransCoreTextureFormat) {
+        self.default_render_texture_format = format;
+    }
 
     pub(crate) fn create_render_texture(&self, desc: &TTRtRequestDescriptor) -> TTRenderTexture {
         let tex_format = match desc.format {
@@ -73,7 +76,6 @@ impl TexTransCoreEngin {
             | wgpu::TextureUsages::COPY_SRC
             | wgpu::TextureUsages::COPY_DST
             | wgpu::TextureUsages::RENDER_ATTACHMENT;
-
 
         let tex_desc = wgpu::TextureDescriptor {
             size: wgpu::Extent3d {

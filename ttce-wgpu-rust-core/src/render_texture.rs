@@ -1,7 +1,8 @@
-use std::{collections::HashMap, ops::Deref};
+use std::{collections::HashMap, ops::Deref, time::Instant};
 
 use crate::{
     compute_shader::{get_format_str, TTComputeShader, TTComputeShaderID, WorkGroupSize},
+    debug_log,
     tex_trans_core_engine::{
         RequestFormat, TTRtRequestDescriptor, TexTransCoreEngin, TexTransCoreEngineContext,
     },
@@ -287,6 +288,7 @@ impl TexTransCoreEngineContext<'_> {
             self.download_impl(target, &read_back_buffer, download_pixel_par_byte);
         };
 
+        let timer = Instant::now();
         let rb_buffer_slice = read_back_buffer.slice(..);
         let (sender, receiver) = tokio::sync::oneshot::channel();
         rb_buffer_slice.map_async(wgpu::MapMode::Read, move |v| {
@@ -299,6 +301,8 @@ impl TexTransCoreEngineContext<'_> {
             .panic_on_timeout();
 
         if let Ok(_) = receiver.await.unwrap() {
+            let end = timer.elapsed();
+            debug_log(&format!("readback-{}ms", end.as_millis()));
             return Some(read_back_buffer);
         } else {
             return None;
@@ -436,7 +440,7 @@ impl TexTransCoreEngin {
                     });
 
             let id = TTComputeShaderID::from(self.compute_shader.len() as u32);
-            println!("{id:?}-/ {wgsl_str}");
+            // println!("{id:?}-/ {wgsl_str}");
 
             self.compute_shader.push(TTComputeShader {
                 module: cs_module,

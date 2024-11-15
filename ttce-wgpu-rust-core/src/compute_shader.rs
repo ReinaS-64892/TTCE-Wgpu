@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use wgpu::util::DeviceExt;
 use wgpu::{ComputePipeline, ShaderModule};
 
+use crate::debug_log;
 use crate::render_texture::TTRenderTexture;
 use crate::tex_trans_core_engine::{TexTransCoreEngin, TexTransCoreEngineContext};
 
@@ -80,18 +81,21 @@ impl TexTransCoreEngin {
         let bind_map = HashMap::<String, u32>::from_iter(bindings);
 
         // println!("{}", wgsl_string);
+        let compile_target_code = convert_wgsl_format(
+            wgsl_string,
+            TTRenderTexture::to_wgpu_texture_format(
+                self.default_texture_format(),
+                crate::TexTransCoreTextureChannel::RGBA,
+            ),
+        );
+        debug_log(operator_name.as_str());
+        debug_log(compile_target_code.as_str());
 
         let cs_module = self
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some((String::from("shade module with ") + &operator_name).as_str()),
-                source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&convert_wgsl_format(
-                    wgsl_string,
-                    TTRenderTexture::to_wgpu_texture_format(
-                        self.default_texture_format(),
-                        crate::TexTransCoreTextureChannel::RGBA,
-                    ),
-                ))),
+                source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&compile_target_code)),
             });
         let compute_pipeline =
             self.device
@@ -143,12 +147,7 @@ impl TTComputeHandler<'_, '_, '_> {
         self.bind_tex_view.insert(bind_index, tex_view);
     }
 
-    pub fn upload_buffer(
-        &mut self,
-        bind_index: u32,
-        buffer_data_span: &[u8],
-        is_constants: bool,
-    ) {
+    pub fn upload_buffer(&mut self, bind_index: u32, buffer_data_span: &[u8], is_constants: bool) {
         if self.bind_buffer.contains_key(&bind_index) {
             //前のバッファーにもう一度詰めて送る方法わかんなかったから破棄
             let _ = self.bind_buffer.remove(&bind_index).unwrap();

@@ -16,8 +16,14 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
 
 
+        [DllImport(__DllName, EntryPoint = "set_debug_log_pointer", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+        internal static extern void set_debug_log_pointer(delegate* unmanaged[Cdecl]<ushort*, int, void> debug_log_fn_ptr);
+
         [DllImport(__DllName, EntryPoint = "create_tex_trans_engine_device", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-        internal static extern void* create_tex_trans_engine_device();
+        internal static extern void* create_tex_trans_engine_device(RequestDevicePreference preference);
+
+        [DllImport(__DllName, EntryPoint = "set_default_texture_format", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+        internal static extern void set_default_texture_format(void* tex_trans_core_engine_ptr, TexTransCoreTextureFormat format);
 
         [DllImport(__DllName, EntryPoint = "drop_tex_trans_engine_device", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
         internal static extern void drop_tex_trans_engine_device(void* tex_trans_core_engine_ptr);
@@ -97,6 +103,13 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public uint z;
     }
 
+
+    internal enum RequestDevicePreference : uint
+    {
+        Auto,
+        DiscreteGPU,
+        IntegratedGPUOrCPU,
+    }
 
     internal enum TexTransCoreTextureChannel : int
     {

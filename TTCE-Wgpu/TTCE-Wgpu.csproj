@@ -5,10 +5,10 @@
     <!-- <TargetFramework>net7.0</TargetFramework> -->
     <!-- <RootNamespace>net.rs64.TexTransCoreEngineForWgpu</RootNamespace> -->
     <AssemblyName>net.rs64.ttce-wgpu</AssemblyName>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>Nullable</WarningsAsErrors>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>9.0</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
