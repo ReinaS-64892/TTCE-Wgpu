@@ -2,7 +2,7 @@ name: RustCoreClippyCheck
 on: push
 
 jobs:
-  clippy_check:
+  clippy-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
