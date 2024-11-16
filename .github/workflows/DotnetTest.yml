@@ -6,6 +6,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup TTT
+        run: |
+          mkdir ProjectPackages
+      - uses: actions/checkout@v4
+        with:
+          repository: ReinaS-64892/TexTransTool
+          ref: Improved-TexTransCore
+          path: ProjectPackages
+
+
       - uses: actions/setup-dotnet@v4
       - name: Run test
         run: |
