@@ -14,7 +14,7 @@ jobs:
         with:
           repository: ReinaS-64892/TexTransTool
           ref: Improved-TexTransCore
-          path: ProjectPackages
+          path: ProjectPackages/TexTransTool
 
       - name: Debug output
         run: |
@@ -22,6 +22,8 @@ jobs:
           echo "---"
           cd ProjectPackages
           ls
+          echo "---"
+          cd TexTransTool
 
 
       - uses: actions/setup-dotnet@v4
