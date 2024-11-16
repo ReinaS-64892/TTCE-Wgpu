@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Move RustCore Directory
-      run: cd ttce-wgpu-rust-core
     - name: Build
-      run: cargo build --verbose
+      run: |
+        cd ttce-wgpu-rust-core
+        cargo build --verbose
