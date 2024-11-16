@@ -8,7 +8,8 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
     public sealed class TTCEWgpuDevice : IDisposable
     {
-        TexTransCoreEngineDeviceHandler _handler;
+        TexTransCoreEngineDeviceHandler? _handler;
+        private bool _isDisposed;
         internal HashSet<TTCEWgpu> _contexts;
         public bool AllowShaderCreation => _contexts.Count == 0;
         public TTCEWgpuDevice(RequestDevicePreference preference = RequestDevicePreference.Auto)
@@ -27,7 +28,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         private void RegisterFormatConvertor()
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
             if (AllowShaderCreation is false) { throw new InvalidOperationException("shader creation is not allowed"); }
 
             unsafe
@@ -37,7 +38,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         }
         public void SetDefaultTextureFormat(TexTransCore.TexTransCoreTextureFormat format)
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
             if (AllowShaderCreation is false) { throw new InvalidOperationException("shader creation is not allowed"); }
 
             unsafe
@@ -47,7 +48,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         }
         public TTComputeShaderID RegisterComputeShaderFromHLSL(string hlslPath, string? hlslSource = null)
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
             if (AllowShaderCreation is false) { throw new InvalidOperationException("shader creation is not allowed"); }
 
             if (hlslSource is not null)
@@ -73,7 +74,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public TTCE GetContext<TTCE>() where TTCE : TTCEWgpu, new()
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
             unsafe
             {
                 var ptr = new IntPtr(NativeMethod.get_ttce_context((void*)_handler.DangerousGetHandle()));
@@ -86,13 +87,22 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         }
 
 
-        public void Dispose()
+        void Dispose(bool disposing)
         {
-            if (_handler != null && _handler.IsInvalid is false)
+            if (_isDisposed) { return; }
+
+            if (disposing)
             {
                 foreach (var ctx in _contexts.ToArray()) { ctx.Dispose(); }
-                _handler.Dispose();
+                _handler?.Dispose();
+                _handler = null;
             }
+
+            _isDisposed = true;
+        }
+        public void Dispose()
+        {
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
 
@@ -101,6 +111,9 @@ namespace net.rs64.TexTransCoreEngineForWgpu
     public static class TTCEWgpuRustCoreDebug
     {
         public static event Action<string> DebugLog = null!;
+
+        static DLCallDelegate? log;
+
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         unsafe delegate void DLCallDelegate(ushort* ptr, int len);
         unsafe static void DLCall(ushort* ptr, int len)
@@ -110,21 +123,43 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         }
         public static unsafe void LogHandlerInitialize()
         {
-            var ptr = (delegate* unmanaged[Cdecl]<ushort*, int, void>)Marshal.GetFunctionPointerForDelegate((DLCallDelegate)DLCall);
-            NativeMethod.set_debug_log_pointer(ptr);
+            log ??= new(DLCall);
+            NativeMethod.set_debug_log_pointer((delegate* unmanaged[Cdecl]<ushort*, int, void>)Marshal.GetFunctionPointerForDelegate(log));
         }
         public static unsafe void LogHandlerDeInitialize()
         {
             NativeMethod.set_debug_log_pointer(null);
         }
-
-
     }
-
+    public class TTCEWgpuRCDebugPrintToConsole : IDisposable
+    {
+        static int s_count = 0;
+        bool _isDisposed = false;
+        public TTCEWgpuRCDebugPrintToConsole()
+        {
+            if (s_count is 0)
+            {
+                TTCEWgpuRustCoreDebug.DebugLog += Console.WriteLine;
+                TTCEWgpuRustCoreDebug.LogHandlerInitialize();
+            }
+            s_count += 1;
+        }
+        public void Dispose()
+        {
+            if (_isDisposed) { return; }
+            s_count -= 1;
+            if (s_count is 0)
+            {
+                TTCEWgpuRustCoreDebug.DebugLog -= Console.WriteLine;
+                TTCEWgpuRustCoreDebug.LogHandlerInitialize();
+            }
+            _isDisposed = true;
+        }
+    }
 
     class TexTransCoreEngineDeviceHandler : SafeHandle
     {
-        unsafe public static TexTransCoreEngineDeviceHandler Create(TTCEWgpuDevice.RequestDevicePreference preference) { return new TexTransCoreEngineDeviceHandler(new IntPtr(NativeMethod.create_tex_trans_engine_device((RequestDevicePreference)preference))); }
+        unsafe public static TexTransCoreEngineDeviceHandler Create(TTCEWgpuDevice.RequestDevicePreference preference) { return new TexTransCoreEngineDeviceHandler(new IntPtr(NativeMethod.create_tex_trans_core_engine_device((RequestDevicePreference)preference))); }
         public TexTransCoreEngineDeviceHandler(IntPtr handle) : base(IntPtr.Zero, true)
         {
             SetHandle(handle);
@@ -134,7 +169,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         protected override bool ReleaseHandle()
         {
-            unsafe { NativeMethod.drop_tex_trans_engine_device((void*)handle); }
+            unsafe { NativeMethod.drop_tex_trans_core_engine_device((void*)handle); }
             return true;
         }
     }
