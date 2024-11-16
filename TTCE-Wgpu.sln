@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TTCE-Wgpu", "TTCE-Wgpu\TTCE-Wgpu.csproj", "{886FD689-CD5A-4159-B7FA-0B239675AF7E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TTCE-Wgpu.Test", "TTCE-Wgpu.Test\TTCE-Wgpu.Test.csproj", "{06C6D8CC-AC8F-4A84-B6AC-C7CD7AD04E97}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TTCE-Wgpu.Tests", "TTCE-Wgpu.Tests\TTCE-Wgpu.Tests.csproj", "{06C6D8CC-AC8F-4A84-B6AC-C7CD7AD04E97}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PackageDeploy", "PackageDeploy\PackageDeploy.csproj", "{6CACBA64-02C9-4060-9143-358B95CCAF24}"
 EndProject
