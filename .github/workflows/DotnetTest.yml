@@ -32,6 +32,9 @@ jobs:
           echo "---"
           cd TexTransTool
           ls
+          echo "---"
+          cd ../..
+          pwd
 
 
       - uses: actions/setup-dotnet@v4
