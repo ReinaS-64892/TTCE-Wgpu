@@ -2,7 +2,7 @@ name: DotnetTest
 on: push
 
 jobs:
-  clippy-check:
+  dotnet-test-run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
