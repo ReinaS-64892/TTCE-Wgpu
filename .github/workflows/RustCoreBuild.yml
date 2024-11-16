@@ -8,17 +8,20 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
 
-    - name: Debug-ToolVersion
-      run: |
-        cargo -V
-        rustc -V
+      - name: Debug-ToolVersion
+        run: |
+          cargo -V
+          rustc -V
 
-    - name: Build
-      run: |
-        cd ttce-wgpu-rust-core
-        cargo build --verbose
+      - name: Build
+        run: |
+          cd ttce-wgpu-rust-core
+          cargo build --verbose
