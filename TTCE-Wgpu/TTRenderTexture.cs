@@ -5,7 +5,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 {
     public sealed class TTRenderTexture : IDisposable, ITTRenderTexture
     {
-        TTCEWgpu _engineContext;
+        TTCEWgpuContextBase _engineContext;
         TTRenderTextureHandler? _handler;
         private bool _isDisposed = false;
         TexTransCore.TexTransCoreTextureChannel _channel;
@@ -21,7 +21,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public TexTransCore.TexTransCoreTextureChannel ContainsChannel => _channel;
 
-        internal TTRenderTexture(TTCEWgpu engineContext, TTRenderTextureHandler handle, TexTransCore.TexTransCoreTextureChannel channel)
+        internal TTRenderTexture(TTCEWgpuContextBase engineContext, TTRenderTextureHandler handle, TexTransCore.TexTransCoreTextureChannel channel)
         {
             _engineContext = engineContext;
             _handler = handle;

@@ -10,7 +10,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
     {
         TexTransCoreEngineDeviceHandler? _handler;
         private bool _isDisposed;
-        internal HashSet<TTCEWgpu> _contexts;
+        internal HashSet<TTCEWgpuContextBase> _contexts;
         public bool AllowShaderCreation => _contexts.Count == 0;
         public TTCEWgpuDevice(RequestDevicePreference preference = RequestDevicePreference.Auto)
         {
@@ -72,7 +72,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 }
         }
 
-        public TTCE GetContext<TTCE>() where TTCE : TTCEWgpu, new()
+        public TTCE GetContext<TTCE>() where TTCE : TTCEWgpuContextBase, new()
         {
             if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
             unsafe
@@ -110,7 +110,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
     public static class TTCEWgpuRustCoreDebug
     {
-        public static event Action<string> DebugLog = null!;
+        public static event Action<string>? DebugLog = null;
 
         static DLCallDelegate? log;
 
@@ -119,7 +119,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         unsafe static void DLCall(ushort* ptr, int len)
         {
             ReadOnlySpan<char> span = new ReadOnlySpan<char>(ptr, len);
-            DebugLog(new string(span));
+            DebugLog?.Invoke(new string(span));
         }
         public static unsafe void LogHandlerInitialize()
         {

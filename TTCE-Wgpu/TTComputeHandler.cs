@@ -6,11 +6,11 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
     public sealed class TTComputeHandler : IDisposable, ITTComputeHandler
     {
-        TTCEWgpu _engineContext;
+        TTCEWgpuContextBase _engineContext;
         TTComputeHandlerPtrHandler? _handler;
         private bool _isDisposed = false;
 
-        internal TTComputeHandler(TTCEWgpu engineContext, TTComputeHandlerPtrHandler handle)
+        internal TTComputeHandler(TTCEWgpuContextBase engineContext, TTComputeHandlerPtrHandler handle)
         {
             _engineContext = engineContext;
             _handler = handle;

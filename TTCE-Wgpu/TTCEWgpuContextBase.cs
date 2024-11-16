@@ -7,12 +7,11 @@ using ChannelFFI = net.rs64.TexTransCoreEngineForWgpu.TexTransCoreTextureChannel
 
 namespace net.rs64.TexTransCoreEngineForWgpu
 {
-
-    public class TTCEWgpu : ITexTransCreateTexture
+    public class TTCEWgpuContextBase : IDisposable
+    , ITexTransCreateTexture
     , ITexTransCopyRenderTexture
     , ITexTransGetComputeHandler
     , ITexTransRenderTextureIO
-    , IDisposable
     {
         TTCEWgpuDevice _device = null!;
         TexTransCoreEngineContextHandler? _handler = null;
@@ -60,6 +59,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public void CopyTexture(TTRenderTexture dist, TTRenderTexture src)
         {
             if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
+            if (dist.EqualSize(src) is false) { throw new ArgumentException(); }
 
             unsafe
             {
@@ -120,7 +120,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         }
 
 
-        void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing)
         {
             if (_isDisposed) { return; }
 
