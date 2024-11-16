@@ -12,6 +12,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Debug-ToolVersion
+      run: |
+        cargo -V
+        rustc -V
+        
     - name: Build
       run: |
         cd ttce-wgpu-rust-core
