@@ -10,6 +10,7 @@ public class TestClass
     public static void Func()
     {
         Console.WriteLine("にゃ！");
+        using var debugHandler = new TTCEWgpuRCDebugPrintToConsole();
 
         using (var ttceDevice = new TTCEWgpuDevice())
         {
