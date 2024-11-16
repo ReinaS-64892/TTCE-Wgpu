@@ -1,3 +1,5 @@
+name: RustCoreBuild
+
 on: push
 
 env:

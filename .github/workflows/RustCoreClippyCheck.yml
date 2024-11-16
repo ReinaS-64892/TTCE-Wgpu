@@ -1,3 +1,4 @@
+name: RustCoreClippyCheck
 on: push
 
 jobs:
@@ -7,6 +8,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-            components: clippy
+          components: clippy
       - name: Run Clippy
-        run: cargo clippy
+        run: |
+          cd ttce-wgpu-rust-core
+          cargo clippy
