@@ -7,6 +7,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: dtolnay/rust-toolchain@stable
+      - name: RustCore Build to Genereate csbinding
+        run: |
+          cd ttce-wgpu-rust-core
+          cargo build
+
+
       - name: Create ProjectPackages directory
         run: |
           mkdir ProjectPackages
