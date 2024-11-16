@@ -1,6 +1,9 @@
 name: DotnetTest
 on: push
 
+env:
+  RUST_BACKTRACE: full
+
 jobs:
   dotnet-test-run:
     runs-on: ubuntu-latest
