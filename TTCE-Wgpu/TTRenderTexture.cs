@@ -6,7 +6,8 @@ namespace net.rs64.TexTransCoreEngineForWgpu
     public sealed class TTRenderTexture : IDisposable, ITTRenderTexture
     {
         TTCEWgpu _engineContext;
-        TTRenderTextureHandler _handler;
+        TTRenderTextureHandler? _handler;
+        private bool _isDisposed = false;
         TexTransCore.TexTransCoreTextureChannel _channel;
 
         string _name;
@@ -30,7 +31,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public uint GetWidth()
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
 
             unsafe
             {
@@ -39,7 +40,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         }
         public uint GetHeight()
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
 
             unsafe
             {
@@ -49,7 +50,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         internal IntPtr GetPtr()
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TTRenderTextureHandler is dropped"); }
 
             unsafe
             {
@@ -57,16 +58,25 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             }
 
         }
-
-        public void Dispose()
+        void Dispose(bool disposing)
         {
-            if (_handler != null && _handler.IsInvalid is false)
+            if (_isDisposed) { return; }
+
+            if (disposing)
             {
                 _engineContext._renderTextures.Remove(this);
-                _handler.Dispose();
+                _handler?.Dispose();
+                _handler = null;
             }
+
+            _isDisposed = true;
+        }
+        public void Dispose()
+        {
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
+
     }
     class TTRenderTextureHandler : SafeHandle
     {

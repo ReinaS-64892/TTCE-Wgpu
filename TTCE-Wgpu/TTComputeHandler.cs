@@ -7,8 +7,8 @@ namespace net.rs64.TexTransCoreEngineForWgpu
     public sealed class TTComputeHandler : IDisposable, ITTComputeHandler
     {
         TTCEWgpu _engineContext;
-        TTComputeHandlerPtrHandler _handler;
-
+        TTComputeHandlerPtrHandler? _handler;
+        private bool _isDisposed = false;
 
         internal TTComputeHandler(TTCEWgpu engineContext, TTComputeHandlerPtrHandler handle)
         {
@@ -18,7 +18,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public int NameToID(string name)
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
             unsafe
             {
                 fixed (char* namePtr = name)
@@ -34,7 +34,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public void SetRenderTexture(int nameID, TTRenderTexture renderTexture)
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
 
             unsafe
             {
@@ -49,7 +49,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         private void UploadBufferImpl<T>(int nameID, ReadOnlySpan<T> buffer, bool isConstants) where T : unmanaged
         {
 
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
 
             unsafe
             {
@@ -63,7 +63,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public (uint x, uint y, uint z) GetWorkGroupSize()
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
             unsafe
             {
                 var wgs = NativeMethod.get_work_group_size((void*)_handler.DangerousGetHandle());
@@ -73,7 +73,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public (uint x, uint y, uint z) WorkGroupSize => GetWorkGroupSize();
         public void Dispatch(uint x, uint y, uint z)
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
 
             unsafe
             {
@@ -81,15 +81,6 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             }
         }
 
-        public void Dispose()
-        {
-            if (_handler != null && _handler.IsInvalid is false)
-            {
-                _engineContext._computeHandlers.Remove(this);
-                _handler.Dispose();
-            }
-            GC.SuppressFinalize(this);
-        }
 
         public void Dispatch(int x, int y, int z) { Dispatch(x, y, z); }
 
@@ -98,6 +89,25 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         {
             if (tex is not TTRenderTexture rt) { throw new InvalidCastException(); }
             SetRenderTexture(id, rt);
+        }
+
+        void Dispose(bool disposing)
+        {
+            if (_isDisposed) { return; }
+
+            if (disposing)
+            {
+                _engineContext._computeHandlers.Remove(this);
+                _handler?.Dispose();
+                _handler = null;
+            }
+
+            _isDisposed = true;
+        }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
     }

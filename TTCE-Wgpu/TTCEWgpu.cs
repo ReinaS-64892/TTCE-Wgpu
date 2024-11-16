@@ -15,7 +15,9 @@ namespace net.rs64.TexTransCoreEngineForWgpu
     , IDisposable
     {
         TTCEWgpuDevice _device = null!;
-        TexTransCoreEngineContextHandler _handler = null!;
+        TexTransCoreEngineContextHandler? _handler = null;
+        private bool _isDisposed;
+
 
         internal HashSet<TTRenderTexture> _renderTextures = new();
         internal HashSet<TTComputeHandler> _computeHandlers = new();
@@ -31,7 +33,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public TTRenderTexture GetRenderTexture(uint width, uint height, TexTransCore.TexTransCoreTextureChannel channel = TexTransCore.TexTransCoreTextureChannel.RGBA)
         {
             if (width == 0 || height == 0) { throw new ArgumentException(); }
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
 
             unsafe
             {
@@ -43,7 +45,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         }
         public TTComputeHandler GetTTComputeHandler(TTComputeShaderID computeShaderID)
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
 
             unsafe
             {
@@ -57,7 +59,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public void CopyTexture(TTRenderTexture dist, TTRenderTexture src)
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
 
             unsafe
             {
@@ -67,7 +69,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public void UploadTexture<T>(TTRenderTexture dist, ReadOnlySpan<T> dataSource, TexTransCore.TexTransCoreTextureFormat format) where T : unmanaged
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
 
             unsafe
             {
@@ -80,7 +82,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public void DownloadTexture<T>(Span<T> dataDist, TexTransCore.TexTransCoreTextureFormat format, TTRenderTexture source) where T : unmanaged
         {
-            if (_handler.IsInvalid) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
 
             unsafe
             {
@@ -106,18 +108,6 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public ITTComputeHandler GetComputeHandler(ITTComputeKey computeKey) { return GetTTComputeHandler(computeKey.Unwrap()); }
 
-        public void Dispose()
-        {
-            if (_handler != null && _handler.IsInvalid is false)
-            {
-                foreach (var rt in _renderTextures.ToArray()) { rt.Dispose(); }
-                foreach (var ch in _computeHandlers.ToArray()) { ch.Dispose(); }
-                _device._contexts.Remove(this);
-
-                _handler.Dispose();
-            }
-            GC.SuppressFinalize(this);
-        }
 
         public void UploadTexture<T>(ITTRenderTexture uploadTarget, ReadOnlySpan<T> bytes, TexTransCore.TexTransCoreTextureFormat format) where T : unmanaged
         {
@@ -127,6 +117,27 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public void DownloadTexture<T>(Span<T> dataDist, TexTransCore.TexTransCoreTextureFormat format, ITTRenderTexture renderTexture) where T : unmanaged
         {
             DownloadTexture(dataDist, format, (TTRenderTexture)renderTexture);
+        }
+
+
+        void Dispose(bool disposing)
+        {
+            if (_isDisposed) { return; }
+
+            if (disposing)
+            {
+                foreach (var rt in _renderTextures.ToArray()) { rt.Dispose(); }
+                foreach (var ch in _computeHandlers.ToArray()) { ch.Dispose(); }
+                _handler?.Dispose();
+                _handler = null;
+            }
+
+            _isDisposed = true;
+        }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 
