@@ -19,6 +19,7 @@ jobs:
       - name: Debug output
         run: |
           ls
+          echo "---"
           cd ProjectPackages
           ls
 
