@@ -2,16 +2,12 @@ mod compute_shader;
 mod render_texture;
 mod tex_trans_core_engine;
 
-use std::{
-    ffi::c_void,
-    ops::Deref,
-    sync::Mutex,
-};
+use std::{ffi::c_void, ops::Deref, sync::Mutex};
 
 use compute_shader::{TTComputeHandler, TTComputeShaderID};
 use once_cell::sync::OnceCell;
 use render_texture::TTRenderTexture;
-use tex_trans_core_engine::{TexTransCoreEngin, TexTransCoreEngineContext};
+use tex_trans_core_engine::{TexTransCoreEngineDevice, TexTransCoreEngineContext};
 use wgpu::{Backends, DeviceType};
 
 static DEBUG_LOG: Mutex<Option<unsafe extern "C" fn(*const u16, i32) -> ()>> = Mutex::new(None);
@@ -55,8 +51,9 @@ pub enum RequestDevicePreference {
     IntegratedGPUOrCPU,
 }
 
+/// TexTransCoreEngineDevice を生成し、ポインターを得ることができる。
 #[no_mangle]
-pub extern "C" fn create_tex_trans_engine_device(
+pub extern "C" fn create_tex_trans_core_engine_device(
     preference: RequestDevicePreference,
 ) -> *mut c_void {
     let (device, queue) = get_tokio_runtime()
@@ -74,15 +71,14 @@ pub extern "C" fn create_tex_trans_engine_device(
                     .into_iter()
                     .find(|a| {
                         let device_type = a.get_info().device_type;
-                        return device_type == DeviceType::IntegratedGpu
-                            || device_type == DeviceType::Cpu;
+                        device_type == DeviceType::IntegratedGpu || device_type == DeviceType::Cpu
                     }),
                 RequestDevicePreference::DiscreteGPU => instance
                     .enumerate_adapters(Backends::all())
                     .into_iter()
                     .find(|a| {
                         let device_type = a.get_info().device_type;
-                        return device_type == DeviceType::DiscreteGpu;
+                        device_type == DeviceType::DiscreteGpu
                     }),
             };
             let adapter = if let Some(adapter) = adapter {
@@ -97,39 +93,53 @@ pub extern "C" fn create_tex_trans_engine_device(
 
             debug_log(&format!("Adapter : \n{:?}", adapter.get_info()));
 
-            let mut device_feature = wgpu::DeviceDescriptor::default();
-            device_feature.required_features =
-                wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
-                    | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM;
+            let device_feature = wgpu::DeviceDescriptor {
+                required_features: wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
+                    | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM,
+                ..Default::default()
+            };
+
             adapter.request_device(&device_feature, None).await
         })
         .unwrap();
 
-    let ttce = tex_trans_core_engine::TexTransCoreEngin::new(device, queue);
+    let ttce = tex_trans_core_engine::TexTransCoreEngineDevice::new(device, queue);
 
     Box::into_raw(Box::new(ttce)) as *mut c_void
 }
+
+/// tex_trans_core_engine_ptr は TexTransCoreEngineDevice のポインターでないといけない。
+/// TexTransCoreEngineDevice のポインターを受け取り、そのデバイスの内部で使われるデフォルトのフォーマットを指定する。
+/// 初期化時に行うようか、 TexTransCoreEngineContext が一つもぶら下がっていないときに行うように。
 #[no_mangle]
 pub extern "C" fn set_default_texture_format(
     tex_trans_core_engine_ptr: *mut c_void,
     format: TexTransCoreTextureFormat,
 ) {
     let engine = unsafe {
-        (tex_trans_core_engine_ptr as *mut TexTransCoreEngin)
+        (tex_trans_core_engine_ptr as *mut TexTransCoreEngineDevice)
             .as_mut()
             .unwrap()
     };
     engine.set_default_texture_format(format);
 }
+
+/// # Safety
+/// tex_trans_core_engine_ptr は TexTransCoreEngineDevice のポインターでないといけない。
+/// Context や TTRenderTexture などぶら下がってる物をすべてドロップしてから呼ぶように。
 #[no_mangle]
-pub unsafe extern "C" fn drop_tex_trans_engine_device(tex_trans_core_engine_ptr: *mut c_void) {
-    let _ = Box::from_raw(tex_trans_core_engine_ptr as *mut TexTransCoreEngin);
+pub unsafe extern "C" fn drop_tex_trans_core_engine_device(tex_trans_core_engine_ptr: *mut c_void) {
+    let _ = Box::from_raw(tex_trans_core_engine_ptr as *mut TexTransCoreEngineDevice);
 }
 
+
+/// tex_trans_core_engine_ptr は TexTransCoreEngineDevice のポインターでないといけない。
+/// TexTransCoreEngineDevice に内部的に使用するフォーマットコンバータを生成させる。
+/// set_default_texture_format と同様、処理を始める前やしていないタイミングで行うように。
 #[no_mangle]
 pub extern "C" fn register_format_convertor(tex_trans_core_engine_ptr: *mut c_void) {
     let engine = unsafe {
-        (tex_trans_core_engine_ptr as *mut TexTransCoreEngin)
+        (tex_trans_core_engine_ptr as *mut TexTransCoreEngineDevice)
             .as_mut()
             .unwrap()
     };
@@ -137,6 +147,10 @@ pub extern "C" fn register_format_convertor(tex_trans_core_engine_ptr: *mut c_vo
 }
 
 // retune of tt_compute_shader_id
+
+/// # Safety
+/// tex_trans_core_engine_ptr は TexTransCoreEngineDevice のポインターでないといけない。
+/// 任意の HLSL を UTF16 (C# string) をコンピュートシェーダーとして登録させることができ、hlsl_path_source は null pointer でもよい。
 #[no_mangle]
 pub unsafe extern "C" fn register_compute_shader_from_hlsl(
     tex_trans_core_engine_ptr: *mut c_void,
@@ -145,33 +159,28 @@ pub unsafe extern "C" fn register_compute_shader_from_hlsl(
     hlsl_path_source: *const u16,
     hlsl_path_source_str_len: i32,
 ) -> u32 {
-    let engine = (tex_trans_core_engine_ptr as *mut TexTransCoreEngin)
+    let engine = (tex_trans_core_engine_ptr as *mut TexTransCoreEngineDevice)
         .as_mut()
         .unwrap();
 
-    let path_slice = std::slice::from_raw_parts(hlsl_path, hlsl_path_str_len as usize);
-    let hlsl_path_rust_string = String::from_utf16(path_slice).unwrap();
+    let hlsl_path_rust_string = String::from_utf16(std::slice::from_raw_parts(
+        hlsl_path,
+        hlsl_path_str_len as usize,
+    ))
+    .unwrap();
 
-    let source_slice_rust_string_opt = if std::ptr::null() != hlsl_path_source {
-        let source_slice =
-            std::slice::from_raw_parts(hlsl_path_source, hlsl_path_source_str_len as usize);
-        let source_slice_rust_string = String::from_utf16(source_slice).unwrap();
-
-        Some(source_slice_rust_string)
-    } else {
-        None
-    };
-
-    let source_slice_rust_str_opt = if let Some(string) = source_slice_rust_string_opt.as_ref() {
-        Some(string.as_str())
-    } else {
-        None
-    };
+    let source_slice_rust_string_opt = (!hlsl_path_source.is_null()).then(|| {
+        String::from_utf16(std::slice::from_raw_parts(
+            hlsl_path_source,
+            hlsl_path_source_str_len as usize,
+        ))
+        .unwrap()
+    });
 
     let id = engine
         .register_compute_shader_from_hlsl(
             hlsl_path_rust_string.as_str(),
-            source_slice_rust_str_opt,
+            source_slice_rust_string_opt.as_deref(),
         )
         .unwrap();
 
@@ -180,20 +189,29 @@ pub unsafe extern "C" fn register_compute_shader_from_hlsl(
 
 // TexTransCoreEngineContext
 
+/// # Safety
+/// tex_trans_core_engine_ptr は TexTransCoreEngineDevice のポインターでないといけない。
+/// TexTransCoreEngineContext を生成し、それのポインターを得ることができる。
+/// 処理が始まる前に行うべきことを行ってから作ることを推奨。
 #[no_mangle]
 pub unsafe extern "C" fn get_ttce_context(tex_trans_core_engine_ptr: *const c_void) -> *mut c_void {
-    let engine = (tex_trans_core_engine_ptr as *const TexTransCoreEngin)
+    let engine = (tex_trans_core_engine_ptr as *const TexTransCoreEngineDevice)
         .as_ref()
         .unwrap();
 
     Box::into_raw(Box::from(engine.create_ctx())) as *mut c_void
 }
 
+/// # Safety
+/// ttce_context_ptr は TexTransCoreEngineContext でないといけない。
 #[no_mangle]
 pub unsafe extern "C" fn drop_ttce_context(ttce_context_ptr: *mut c_void) {
     let _ = Box::from_raw(ttce_context_ptr as *mut TexTransCoreEngineContext);
 }
 
+/// # Safety
+/// ttce_context_ptr は TexTransCoreEngineContext のポインターでないといけない。
+/// TTRenderTexture のポインターを得る事ができる。
 #[no_mangle]
 pub unsafe extern "C" fn get_render_texture(
     ttce_context_ptr: *mut c_void,
@@ -210,11 +228,15 @@ pub unsafe extern "C" fn get_render_texture(
     )) as *mut c_void
 }
 
+/// # Safety
+///  TTRenderTexture のポインターでないといけない。
 #[no_mangle]
 pub unsafe extern "C" fn drop_render_texture(render_texture_ptr: *mut c_void) {
     let _ = Box::from_raw(render_texture_ptr as *mut TTRenderTexture);
 }
 
+/// # Safety
+///  TTRenderTexture のポインターでないといけない。
 #[no_mangle]
 pub unsafe extern "C" fn get_width(render_texture_ptr: *mut c_void) -> u32 {
     let from_render_texture = (render_texture_ptr as *const TTRenderTexture)
@@ -224,6 +246,8 @@ pub unsafe extern "C" fn get_width(render_texture_ptr: *mut c_void) -> u32 {
     from_render_texture.width()
 }
 
+/// # Safety
+///  TTRenderTexture のポインターでないといけない。
 #[no_mangle]
 pub unsafe extern "C" fn get_height(render_texture_ptr: *mut c_void) -> u32 {
     let from_render_texture = (render_texture_ptr as *const TTRenderTexture)
@@ -251,6 +275,9 @@ pub enum TexTransCoreTextureFormat {
     Float = 3,
 }
 
+/// # Safety
+/// 二つの TTRenderTexture のポインターでなければならない。
+/// 形式の変換や解像度のリサイズなどは一切行えないので注意。
 #[no_mangle]
 pub unsafe extern "C" fn copy_texture(
     ttce_context_ptr: *mut c_void,
@@ -267,8 +294,14 @@ pub unsafe extern "C" fn copy_texture(
         .as_ref()
         .unwrap();
 
-    engine_ctx.copy_texture(&dist_render_texture, &source_render_texture);
+    engine_ctx.copy_texture(dist_render_texture, source_render_texture);
 }
+
+/// # Safety
+/// ttce_context_ptr は TexTransCoreEngineContext
+/// render_texture_ptr は TTRenderTexture
+/// data は 配列の先頭 のポインター
+/// data_len を format と 書き込み先の解像度と正しく長さが合うようにしなければならない。
 #[no_mangle]
 pub unsafe extern "C" fn upload_texture(
     ttce_context_ptr: *mut c_void,
@@ -285,8 +318,14 @@ pub unsafe extern "C" fn upload_texture(
         .as_ref()
         .unwrap();
 
-    engine_ctx.upload_texture(&render_texture, data_slice, format);
+    engine_ctx.upload_texture(render_texture, data_slice, format);
 }
+
+/// # Safety
+/// ttce_context_ptr は TexTransCoreEngineContext
+/// render_texture_ptr は TTRenderTexture
+/// write_data は 配列の先頭 のポインター
+/// write_data_len を format と 書き込み先の解像度と正しく長さが合うようにしなければならない。
 #[no_mangle]
 pub unsafe extern "C" fn download_texture(
     ttce_context_ptr: *mut c_void,
@@ -317,6 +356,10 @@ pub unsafe extern "C" fn download_texture(
 }
 
 // TTComputeHandler
+
+/// # Safety
+/// ttce_context_ptr は TexTransCoreEngineContext のポインターでないといけないし、
+/// tt_compute_shader_id は register_compute_shader_from_hlsl から得られる u32 でないといけない。
 #[no_mangle]
 pub unsafe extern "C" fn get_compute_handler(
     ttce_context_ptr: *mut c_void,
@@ -333,10 +376,15 @@ pub unsafe extern "C" fn get_compute_handler(
     )) as *mut c_void
 }
 
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインターでないといけない。
 #[no_mangle]
 pub unsafe extern "C" fn drop_compute_handler(tt_compute_handler_ptr: *mut c_void) {
     let _ = Box::from_raw(tt_compute_handler_ptr as *mut TTComputeHandler);
 }
+
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインターでないといけない。
 #[no_mangle]
 pub unsafe extern "C" fn get_bind_index(
     tt_compute_handler_ptr: *const c_void,
@@ -368,6 +416,9 @@ pub struct GetBindIndexResult {
     bind_index: u32,
 }
 
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインター、render_texture_ptr は TTRenderTexture のポインターでないといけない。
+/// bind_index は get_bind_index から得た値を使うように。
 #[no_mangle]
 pub unsafe extern "C" fn set_render_texture(
     tt_compute_handler_ptr: *mut c_void,
@@ -385,6 +436,9 @@ pub unsafe extern "C" fn set_render_texture(
     compute_handler.set_render_texture(bind_index, render_texture);
 }
 
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインター、 buffer は アップロードしたい 配列の先頭の のポインターでないといけない。
+/// bind_index は get_bind_index から得た値を使うように。
 #[no_mangle]
 pub unsafe extern "C" fn upload_constants_buffer(
     tt_compute_handler_ptr: *mut c_void,
@@ -400,6 +454,10 @@ pub unsafe extern "C" fn upload_constants_buffer(
 
     compute_handler.upload_buffer(bind_index, buffer, true);
 }
+
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインター、 buffer は アップロードしたい 配列の先頭の のポインターでないといけない。
+/// bind_index は get_bind_index から得た値を使うように。
 #[no_mangle]
 pub unsafe extern "C" fn upload_storage_buffer(
     tt_compute_handler_ptr: *mut c_void,
@@ -431,6 +489,9 @@ impl WorkGroupSize {
         }
     }
 }
+
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインター
 #[no_mangle]
 pub unsafe extern "C" fn get_work_group_size(
     tt_compute_handler_ptr: *const c_void,
@@ -441,6 +502,8 @@ pub unsafe extern "C" fn get_work_group_size(
     WorkGroupSize::from(compute_handler.get_work_group_size())
 }
 
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインター
 #[no_mangle]
 pub unsafe extern "C" fn dispatch(tt_compute_handler_ptr: *mut c_void, x: u32, y: u32, z: u32) {
     let compute_handler = (tt_compute_handler_ptr as *mut TTComputeHandler)

@@ -10,11 +10,13 @@ use wgpu::{ComputePipeline, ShaderModule};
 
 use crate::debug_log;
 use crate::render_texture::TTRenderTexture;
-use crate::tex_trans_core_engine::{TexTransCoreEngin, TexTransCoreEngineContext};
+use crate::tex_trans_core_engine::{TexTransCoreEngineDevice, TexTransCoreEngineContext};
 
 #[derive(Debug)]
 pub struct TTComputeShader {
+    #[allow(dead_code)]
     pub(crate) module: ShaderModule,
+
     pub(crate) pipeline: ComputePipeline,
     pub(crate) binding_map: HashMap<String, u32>,
     pub(crate) work_group_size: WorkGroupSize,
@@ -24,7 +26,7 @@ pub struct TTComputeShaderID(u32);
 
 impl TTComputeShaderID {
     pub fn from(id: u32) -> TTComputeShaderID {
-        TTComputeShaderID { 0: id }
+        TTComputeShaderID(id)
     }
 }
 
@@ -35,7 +37,7 @@ impl Deref for TTComputeShaderID {
         &self.0
     }
 }
-impl TexTransCoreEngin {
+impl TexTransCoreEngineDevice {
     pub fn register_compute_shader_from_hlsl(
         &mut self,
         hlsl_file_path: &str,
@@ -63,8 +65,8 @@ impl TexTransCoreEngin {
             hlsl_string.as_str(),
             "CSMain",
             "cs_6_0",
-            &vec!["-spirv", "-HV 2018"],
-            &vec![],
+            &["-spirv", "-HV 2018"],
+            &[],
         );
 
         if let Err(er) = spv_result {
@@ -72,12 +74,7 @@ impl TexTransCoreEngin {
         }
         let spv = spv_result.unwrap();
 
-        let convert_wgsl_string_result = spv_to_wgsl_and_binding_descriptor(spv);
-        if let Err(er) = convert_wgsl_string_result {
-            return Err(er);
-        }
-
-        let (wgsl_string, bindings, wg_size) = convert_wgsl_string_result.unwrap();
+        let (wgsl_string, bindings, wg_size) = spv_to_wgsl_and_binding_descriptor(spv)?;
         let bind_map = HashMap::<String, u32>::from_iter(bindings);
 
         // println!("{}", wgsl_string);
@@ -177,11 +174,11 @@ impl TTComputeHandler<'_, '_, '_> {
 
     pub fn dispatch(&mut self, x: u32, y: u32, z: u32) {
         let tex_entries = self.bind_tex_view.iter().map(|t| wgpu::BindGroupEntry {
-            binding: t.0.clone(),
+            binding: *t.0,
             resource: wgpu::BindingResource::TextureView(t.1),
         });
         let buffer_entries = self.bind_buffer.iter().map(|b| wgpu::BindGroupEntry {
-            binding: b.0.clone(),
+            binding: *b.0,
             resource: b.1.as_entire_binding(),
         });
 
@@ -220,23 +217,13 @@ impl<'ctx> TexTransCoreEngineContext<'ctx> {
 
         Ok(TTComputeHandler {
             ctx: self,
-            compute_shader: compute_shader,
+            compute_shader,
             bind_tex_view: HashMap::new(),
             bind_buffer: HashMap::new(),
         })
     }
 }
-
-pub const BLENDING_SHADER_TEMPLATE: &str = r#"
-RWTexture2D<float4> AddTex;
-RWTexture2D<float4> DistTex;
-
-[numthreads(16, 16, 1)] void CSMain(uint3 id : SV_DispatchThreadID)
-{
-    DistTex[id.xy] = ColorBlend( DistTex[id.xy] , AddTex[id.xy] );
-}
-"#;
-
+#[allow(clippy::type_complexity)]
 pub(crate) fn spv_to_wgsl_and_binding_descriptor(
     spv: Vec<u8>,
 ) -> Result<(String, Vec<(String, u32)>, WorkGroupSize), Box<dyn Error>> {
@@ -313,19 +300,23 @@ fn convert_wgsl_format(str: String, format: wgpu::TextureFormat) -> String {
     match format {
         wgpu::TextureFormat::Rgba8Unorm
         | wgpu::TextureFormat::Rgba16Unorm
-        | wgpu::TextureFormat::Rgba16Float => str.replace(WGSL_RGBA32FLOAT, get_format_str(format)),
+        | wgpu::TextureFormat::Rgba16Float => str.replace(WGSL_RGBA32FLOAT, format.as_type_str()),
         _ => str,
     }
 }
 
-pub(crate) fn get_format_str(format: wgpu::TextureFormat) -> &'static str {
-    match format {
-        wgpu::TextureFormat::Rgba8Unorm => WGSL_RGBA8UNORM,
-        wgpu::TextureFormat::Rgba16Unorm => WGSL_RGBA16UNORM,
-        wgpu::TextureFormat::Rgba16Float => WGSL_RGBA16FLOAT,
-        wgpu::TextureFormat::Rgba32Float => WGSL_RGBA32FLOAT,
-        wgpu::TextureFormat::Depth32Float => WGSL_R32FLOAT,
-        _ => panic!(),
+pub trait AsTypeStr {
+    fn as_type_str(&self) -> &'static str;
+}
+impl AsTypeStr for wgpu::TextureFormat {
+    fn as_type_str(&self) -> &'static str {
+        match self {
+            wgpu::TextureFormat::Rgba8Unorm => WGSL_RGBA8UNORM,
+            wgpu::TextureFormat::Rgba16Unorm => WGSL_RGBA16UNORM,
+            wgpu::TextureFormat::Rgba16Float => WGSL_RGBA16FLOAT,
+            wgpu::TextureFormat::Rgba32Float => WGSL_RGBA32FLOAT,
+            _ => panic!(),
+        }
     }
 }
 
@@ -333,4 +324,3 @@ const WGSL_RGBA8UNORM: &str = "rgba8unorm";
 const WGSL_RGBA16UNORM: &str = "rgba16unorm";
 const WGSL_RGBA16FLOAT: &str = "rgba16float";
 const WGSL_RGBA32FLOAT: &str = "rgba32float";
-const WGSL_R32FLOAT: &str = "r32float";

@@ -1,10 +1,10 @@
 use std::{collections::HashMap, ops::Deref, time::Instant};
 
 use crate::{
-    compute_shader::{get_format_str, TTComputeShader, TTComputeShaderID, WorkGroupSize},
+    compute_shader::{AsTypeStr, TTComputeShader, TTComputeShaderID, WorkGroupSize},
     debug_log,
     tex_trans_core_engine::{
-        RequestFormat, TTRtRequestDescriptor, TexTransCoreEngin, TexTransCoreEngineContext,
+        RequestFormat, TTRtRequestDescriptor, TexTransCoreEngineDevice, TexTransCoreEngineContext,
     },
     TexTransCoreTextureChannel, TexTransCoreTextureFormat,
 };
@@ -215,7 +215,7 @@ impl TexTransCoreEngineContext<'_> {
 
         let data_layout = wgpu::ImageDataLayout {
             offset: 0,
-            bytes_per_row: Some((target.width() * pixel_par_byte) as u32),
+            bytes_per_row: Some(target.width() * pixel_par_byte),
             rows_per_image: None,
         };
         let data_size = wgpu::Extent3d {
@@ -228,22 +228,19 @@ impl TexTransCoreEngineContext<'_> {
             self.send_command();
             self.engine
                 .queue
-                .write_texture(target.as_image_copy(), &data, data_layout, data_size);
+                .write_texture(target.as_image_copy(), data, data_layout, data_size);
         } else {
-            let mut copy_src = self.get_render_texture_with(&TTRtRequestDescriptor {
+            let copy_src = self.get_render_texture_with(&TTRtRequestDescriptor {
                 width: target.width(),
                 height: target.height(),
                 format: RequestFormat::Manual(data_format, target_channel),
             });
 
-            self.engine.queue.write_texture(
-                copy_src.as_image_copy(),
-                &data,
-                data_layout,
-                data_size,
-            );
+            self.engine
+                .queue
+                .write_texture(copy_src.as_image_copy(), data, data_layout, data_size);
 
-            self.convert_to_copy(target, &mut copy_src);
+            self.convert_to_copy(target, &copy_src);
         }
     }
 
@@ -282,7 +279,7 @@ impl TexTransCoreEngineContext<'_> {
             let mut desc = target.get_request_descriptor();
             desc.format = RequestFormat::Manual(download_format.unwrap(), target_channel);
             let convert_temp = self.get_render_texture_with(&desc);
-            self.convert_to_copy(&convert_temp, &target);
+            self.convert_to_copy(&convert_temp, target);
             self.download_impl(&convert_temp, &read_back_buffer, download_pixel_par_byte);
         } else {
             self.download_impl(target, &read_back_buffer, download_pixel_par_byte);
@@ -300,12 +297,12 @@ impl TexTransCoreEngineContext<'_> {
             .poll(wgpu::Maintain::wait())
             .panic_on_timeout();
 
-        if let Ok(_) = receiver.await.unwrap() {
+        if receiver.await.unwrap().is_ok() {
             let end = timer.elapsed();
             debug_log(&format!("readback-{}ms", end.as_millis()));
-            return Some(read_back_buffer);
+            Some(read_back_buffer)
         } else {
-            return None;
+            None
         }
     }
 
@@ -318,7 +315,7 @@ impl TexTransCoreEngineContext<'_> {
         let encoder = self.get_command_encoder_as_mut();
         encoder.copy_texture_to_buffer(
             wgpu::ImageCopyTextureBase {
-                texture: &render_texture,
+                texture: render_texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
@@ -341,51 +338,6 @@ impl TexTransCoreEngineContext<'_> {
     }
 }
 
-/*
-impl TexTransCoreEngineContext<'_> {
-    fn check_descriptor_to_vec(&mut self, desc: &TTRenderTextureDescriptor) {
-        if self.pooled_render_textures.contains_key(desc).not() {
-            self.pooled_render_textures.insert(desc.clone(), Vec::new());
-        }
-    }
-    pub fn get_render_texture(&mut self, desc: &TTRenderTextureDescriptor) -> TTRenderTexture {
-        let mut checked_desc = desc.clone();
-        if checked_desc.format.is_none() {
-            checked_desc.format = Some(self.engine.default_texture_format())
-        }
-        self.check_descriptor_to_vec(&checked_desc);
-
-        let try_get_pooled = if let Some(pool) = self.pooled_render_textures.get_mut(&checked_desc)
-        {
-            if let Some(rt) = pool.pop() {
-                Some(rt)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        if let Some(pooled) = try_get_pooled {
-            return pooled;
-        } else {
-            return self.engine.create_render_texture(&desc);
-        }
-    }
-    pub fn retune_render_texture(&mut self, texture: TTRenderTexture) {
-        let desc = texture.get_descriptor();
-
-        self.check_descriptor_to_vec(&desc);
-
-        if let Some(pool) = self.pooled_render_textures.get_mut(&desc) {
-            pool.push(texture);
-        } else {
-            println!("retune to pool failed!")
-        }
-    }
-}
-*/
-
 impl TexTransCoreEngineContext<'_> {
     pub fn get_render_texture(
         &self,
@@ -393,9 +345,9 @@ impl TexTransCoreEngineContext<'_> {
         height: u32,
         channel: TexTransCoreTextureChannel,
     ) -> TTRenderTexture {
-        self.engine.create_render_texture(&&TTRtRequestDescriptor {
-            width: width,
-            height: height,
+        self.engine.create_render_texture(&TTRtRequestDescriptor {
+            width,
+            height,
             format: RequestFormat::AutoWithChannel(channel),
         })
     }
@@ -403,10 +355,10 @@ impl TexTransCoreEngineContext<'_> {
         &self,
         arg_desc: &TTRtRequestDescriptor,
     ) -> TTRenderTexture {
-        self.engine.create_render_texture(&arg_desc)
+        self.engine.create_render_texture(arg_desc)
     }
 }
-impl TexTransCoreEngin {
+impl TexTransCoreEngineDevice {
     pub(crate) fn register_format_convertor(&mut self) {
         let mut bind_map = HashMap::new();
         bind_map.insert("SrcTex".to_string(), 0_u32);
@@ -415,12 +367,9 @@ impl TexTransCoreEngin {
         for cv in FORMAT_TABLE {
             let from_format = cv.from;
             let to_format = cv.to;
-            let wgsl_str = String::new()
-                + FORMAT_CONVERTER_TEMPLATE_1
-                + get_format_str(from_format)
-                + FORMAT_CONVERTER_TEMPLATE_2
-                + get_format_str(to_format)
-                + FORMAT_CONVERTER_TEMPLATE_3;
+            let wgsl_str = FORMAT_CONVERTER_TEMPLATE
+                .replace("$$$FROM$$$", from_format.as_type_str())
+                .replace("$$$TO$$$", to_format.as_type_str());
 
             let cs_module = self
                 .device
@@ -449,7 +398,7 @@ impl TexTransCoreEngin {
                 work_group_size: WorkGroupSize { x: 16, y: 16, z: 1 },
             });
 
-            self.converter_id.insert(cv.clone(), id);
+            self.converter_id.insert(*cv, id);
         }
     }
 }
@@ -505,15 +454,11 @@ pub const FORMAT_TABLE: &[ConvertTextureFormat] = &[
     },
 ];
 
-pub const FORMAT_CONVERTER_TEMPLATE_1: &str = r#"
+pub const FORMAT_CONVERTER_TEMPLATE: &str = r#"
 @group(0) @binding(0)
-var SrcTex: texture_storage_2d<"#;
-
-pub const FORMAT_CONVERTER_TEMPLATE_2: &str = r#",read>;
+var SrcTex: texture_storage_2d<$$$FROM$$$,read>;
 @group(0) @binding(1)
-var DistTex: texture_storage_2d<"#;
-
-pub const FORMAT_CONVERTER_TEMPLATE_3: &str = r#",write>;
+var DistTex: texture_storage_2d<$$$TO$$$,write>;
 
 @compute @workgroup_size(16, 16, 1)
 fn CSMain(@builtin(global_invocation_id) param: vec3<u32>) {
