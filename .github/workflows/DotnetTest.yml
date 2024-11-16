@@ -24,6 +24,7 @@ jobs:
           ls
           echo "---"
           cd TexTransTool
+          ls
 
 
       - uses: actions/setup-dotnet@v4
