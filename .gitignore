@@ -7,3 +7,5 @@ TTCE-Wgpu.Test/TestData
 **/obj/*
 
 ProjectPackages
+
+*.g.cs
