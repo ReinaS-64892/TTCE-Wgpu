@@ -1,0 +1,13 @@
+name: DotnetTest
+on: push
+
+jobs:
+  clippy-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+      - name: Run test
+        run: |
+          cd TTCE-Wgpu.Tests
+          dotnet test
