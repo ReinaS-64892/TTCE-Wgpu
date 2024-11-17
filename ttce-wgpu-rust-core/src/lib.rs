@@ -88,7 +88,7 @@ pub extern "C" fn create_tex_trans_core_engine_device(
                 instance
                     .request_adapter(&request_adapter_option)
                     .await
-                    .unwrap()
+                    .expect("fallback adapter request failed when ttce device creation")
             };
 
             debug_log(&format!("Adapter : \n{:?}", adapter.get_info()));
