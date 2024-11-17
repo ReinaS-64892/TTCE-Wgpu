@@ -37,7 +37,7 @@ static TOKIO_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 fn create_tokio_runtime() -> tokio::runtime::Runtime {
     tokio::runtime::Builder::new_current_thread()
         .build()
-        .unwrap()
+        .expect("tokio runtime initializing failed !?")
 }
 fn get_tokio_runtime() -> &'static tokio::runtime::Runtime {
     TOKIO_RUNTIME.get_or_init(create_tokio_runtime)
@@ -64,7 +64,7 @@ pub extern "C" fn create_tex_trans_core_engine_device(
                     instance
                         .request_adapter(&wgpu::RequestAdapterOptions::default())
                         .await
-                        .unwrap(),
+                        .expect("adapter request failed when ttce device creation"),
                 ),
                 RequestDevicePreference::IntegratedGPUOrCPU => instance
                     .enumerate_adapters(Backends::all())
