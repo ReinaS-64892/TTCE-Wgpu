@@ -47,12 +47,12 @@ jobs:
 
       - name: setup dxc compiler
         run: |
-          mkdir dxc_ws
-          cd dxc_ws
+          mkdir dxc
+          cd dxc
           curl -L https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2407/linux_dxc_2024_07_31.x86_64.tar.gz -o ./linux_dxc.tar.gz
           tar -zxf linux_dxc.tar.gz
           cd lib
-          export PATH=$PATH`pwd`
+          pwd
           ls
 
       - uses: actions/setup-dotnet@v4
