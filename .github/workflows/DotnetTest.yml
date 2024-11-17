@@ -45,6 +45,13 @@ jobs:
         run: |
           sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
 
+      - name: setup dxc compiler
+        run: |
+          mkdir dxc_ws
+          cd dxc_ws
+          curl -L https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2407/linux_dxc_2024_07_31.x86_64.tar.gz -o ./linux_dxc.tar.gz
+          tar -zxf linux_dxc.tar.gz
+          export PATH=$PATH`pwd`
 
       - uses: actions/setup-dotnet@v4
       - name: Run test
