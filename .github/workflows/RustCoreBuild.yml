@@ -18,7 +18,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: build-${{ matrix.os }}
+          workspaces: ttce-wgpu-rust-core -> target
 
       - name: Debug-ToolVersion
         run: |
