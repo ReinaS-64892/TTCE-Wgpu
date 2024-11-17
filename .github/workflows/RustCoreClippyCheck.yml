@@ -9,6 +9,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: build-ubuntu-latest
+
       - name: Run Clippy
         run: |
           cd ttce-wgpu-rust-core

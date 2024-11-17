@@ -10,6 +10,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: build-ubuntu-latest
+
       - uses: dtolnay/rust-toolchain@stable
       - name: RustCore Build to Genereate csbinding
         run: |
