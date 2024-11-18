@@ -33,6 +33,7 @@ jobs:
       - name: out-put upload
         uses: actions/upload-artifact@v4
         with:
+          if-no-files-found: ignore
           name: rust-core-${{ matrix.os }}
           path: |
             ttce-wgpu-rust-core/target/ttce_wgpu_rust_core.dll
