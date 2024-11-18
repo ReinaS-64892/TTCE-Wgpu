@@ -35,22 +35,16 @@ jobs:
           brew update
           brew install ninja
 
-
-      - name: build set up (windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          mkdir hlsl_build
-          mkdir hlsl_build\hlsl_src
-          $wp=(gl).Path
-          utils\hct\hctstart.cmd $wp\hlsl_build\hlsl_src $wp\hlsl_build
-
       - name: run build (ubuntu or mac)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
           cmake -B build -G Ninja
           ninja -C build
 
-      - name: run build (win)
+      - name: setup to build (windows)
         if: matrix.os == 'windows-latest'
         run: |
-          cmake ./
+          mkdir dxc_build
+          $wp=(gl).Path
+          utils\hct\hctstart.cmd .\ $wp\dxc_build
+          utils\hct\hctbuild.cmd -release -spirv -buildoutdir $wp\dxc_build
