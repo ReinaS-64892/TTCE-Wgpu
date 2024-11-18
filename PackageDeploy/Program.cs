@@ -10,7 +10,10 @@ internal class Program
     const string TTCE_WGPU_RUST_CORE_DLL = "ttce_wgpu_rust_core.dll";
     const string TTCE_WGPU_DLL = "net.rs64.ttce-wgpu.dll";
     const string UNITY_PACKAGE_META_DATA = "UnityPackageMetaData";
-
+    /// <summary>
+    /// ローカル環境向けのパッケージデプロイ用のスクリプトです。
+    /// Windows環境以外向けには作られておらず、どうなるかわからないですが...ほしい人は contribution してね！
+    /// </summary>
     static void Main(string[] args)
     {
         Console.WriteLine("Nya!");
