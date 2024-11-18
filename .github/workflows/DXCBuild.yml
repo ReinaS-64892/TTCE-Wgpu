@@ -2,13 +2,50 @@ name: DirectXShaderCompiler Build
 on: [workflow_call, workflow_dispatch]
 
 jobs:
-    dxc-build:
-      strategy:
-        matrix:
-          os: [windows-latest, ubuntu-latest, macos-latest]
-      runs-on: ${{ matrix.os }}
-      steps:
-        - uses: actions/checkout@v4
-          with:
-            repository: microsoft/DirectXShaderCompiler
+  dxc-build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: microsoft/DirectXShaderCompiler
+          submodules: true
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: build set up (ubuntu)
+        if: ${{ matrix.os }} == "ubuntu-latest"
+        run: |
+          sudo apt-get install ninja-build
+
+          curl https://apt.llvm.org/llvm.sh >> ./llvm.sh
+          sudo ./llvm.sh 18
+
+          sudo apt-get install libc++-18-dev
+
+      - name: build set up (windows)
+        if: ${{ matrix.os }} == "windows-latest"
+        run: |
+          sudo apt-get install ninja-build
+
+          curl https://apt.llvm.org/llvm.sh >> ./llvm.sh
+          sudo ./llvm.sh 18
+
+          sudo apt-get install libc++-18-dev
+
+
+      - name: build set up (mac)
+        if: ${{ matrix.os }} == "macos-latest"
+        run: |
+          brew update
+          brew install ninja
+
+
+      - name: run build
+        run: |
+          cmake -B build -G Ninja
+          ninja -C build
