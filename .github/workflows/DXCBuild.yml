@@ -38,7 +38,12 @@ jobs:
       - name: run build (ubuntu or mac)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
-          ninja -C build 
+          cmake ./ -B dxc_build -C ./cmake/caches/PredefinedParams.cmake -DCMAKE_BUILD_TYPE=Release -G Ninja
+          ninja -C dxc_build
+
+          echo "--- build end ---"
+
+          ls ./dxc_build
 
       - name: cache (windows)
         if: matrix.os == 'windows-latest'
