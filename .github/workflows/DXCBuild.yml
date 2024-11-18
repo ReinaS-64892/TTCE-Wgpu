@@ -41,10 +41,21 @@ jobs:
           cmake -B build -G Ninja
           ninja -C build
 
+      - name: cache (windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v4
+        with:
+          path: dxc_build
+          key: windows_dxc_build
+
       - name: setup to build (windows)
         if: matrix.os == 'windows-latest'
         run: |
-          mkdir dxc_build
+          mkdir -Force dxc_build
           $wp=(gl).Path
           utils\hct\hctstart.cmd .\ $wp\dxc_build
           utils\hct\hctbuild.cmd -release -spirv -buildoutdir $wp\dxc_build
+
+          echo "--- build end ---"
+
+          ls .\dxc_build
