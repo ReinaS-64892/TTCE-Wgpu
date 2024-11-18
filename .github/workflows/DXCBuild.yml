@@ -51,6 +51,12 @@ jobs:
 
           ls ./dxc_build
 
+          echo "---   ---"
+
+          cd dxc_build
+          find -name ".so"
+          find -name ".dylib"
+
       - name: setup to build (windows)
         if: matrix.os == 'windows-latest'
         run: |
@@ -61,4 +67,5 @@ jobs:
 
           echo "--- build end ---"
 
-          ls .\dxc_build\Release\bin
+          cd dxc_build
+          ls .\Release\bin
