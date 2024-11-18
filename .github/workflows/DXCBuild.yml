@@ -18,7 +18,7 @@ jobs:
           python-version: "3.x"
 
       - name: build set up (ubuntu)
-        if: matrix.os == `ubuntu-latest`
+        if: ${{ matrix.os }} == 'ubuntu-latest'
         run: |
           sudo apt-get install ninja-build
 
@@ -28,12 +28,12 @@ jobs:
           sudo apt-get install libc++-18-dev
 
       - name: build set up (windows)
-        if: matrix.os == `windows-latest`
+        if: ${{ matrix.os }} == 'windows-latest'
         run: |
           echo "どうすればいいんだろう...?"
 
       - name: build set up (mac)
-        if: matrix.os == `macos-latest`
+        if: ${{ matrix.os }} == 'macos-latest'
         run: |
           brew update
           brew install ninja
