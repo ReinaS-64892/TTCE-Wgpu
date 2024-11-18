@@ -35,10 +35,10 @@ jobs:
         with:
           name: rust-core-${{ matrix.os }}
           path: |
-            ttce-wgpu-rust-core/target/*ttce_wgpu_rust_core.*
-            !ttce-wgpu-rust-core/target/*ttce_wgpu_rust_core.d
-            !ttce-wgpu-rust-core/target/ttce_wgpu_rust_core.dll.*
-            !ttce-wgpu-rust-core/target/ttce_wgpu_rust_core.pdb
+            ttce-wgpu-rust-core/target/release/*ttce_wgpu_rust_core.*
+            !ttce-wgpu-rust-core/target/release/*ttce_wgpu_rust_core.d
+            !ttce-wgpu-rust-core/target/release/ttce_wgpu_rust_core.dll.*
+            !ttce-wgpu-rust-core/target/release/ttce_wgpu_rust_core.pdb
 
       - name: Debug-Output
         run: |
