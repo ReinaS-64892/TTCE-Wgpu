@@ -39,10 +39,10 @@ jobs:
       - name: build set up (windows)
         if: matrix.os == 'windows-latest'
         run: |
-          mkdir o1
-          mkdir o2
+          mkdir hlsl_build
+          mkdir hlsl_build\hlsl_src
           $wp=(gl).Path
-          utils\hct\hctstart.cmd $wp\o1 $wp\o2
+          utils\hct\hctstart.cmd $wp\hlsl_build\hlsl_src $wp\hlsl_build
 
       - name: run build (ubuntu or mac)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
