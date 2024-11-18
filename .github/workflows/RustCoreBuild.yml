@@ -35,8 +35,10 @@ jobs:
         with:
           name: rust-core-${{ matrix.os }}
           path: |
-            ttce-wgpu-rust-core/target/*
-              
+            ttce-wgpu-rust-core/target/ttce_wgpu_rust_core.dll
+            ttce-wgpu-rust-core/target/libttce_wgpu_rust_core.so
+            ttce-wgpu-rust-core/target/libttce_wgpu_rust_core.dylib
+
       - name: Debug-Output
         run: |
           ls ttce-wgpu-rust-core/target/release
