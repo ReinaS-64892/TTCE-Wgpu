@@ -30,6 +30,13 @@ jobs:
           cd ttce-wgpu-rust-core
           cargo build --release --verbose
 
+      - name: out-put upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-core-${{ matrix.os }}
+          path: |
+            ttce-wgpu-rust-core/target/*
+              
       - name: Debug-Output
         run: |
           ls ttce-wgpu-rust-core/target/release
