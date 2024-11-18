@@ -1,6 +1,6 @@
 name: RustCoreBuild
 
-on: push
+on: [push, workflow_call, workflow_dispatch]
 
 env:
   CARGO_INCREMENTAL: 0
