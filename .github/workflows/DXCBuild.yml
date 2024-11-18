@@ -38,8 +38,7 @@ jobs:
       - name: run build (ubuntu or mac)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
-          cmake -B build -G Ninja
-          ninja -C build
+          ninja -C build 
 
       - name: cache (windows)
         if: matrix.os == 'windows-latest'
@@ -58,4 +57,4 @@ jobs:
 
           echo "--- build end ---"
 
-          ls .\dxc_build
+          ls .\dxc_build\Release\bin
