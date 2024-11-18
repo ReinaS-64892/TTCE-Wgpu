@@ -39,9 +39,10 @@ jobs:
       - name: build set up (windows)
         if: matrix.os == 'windows-latest'
         run: |
-          mkdir ..\o1
-          mkdir ..\o2
-          utils\hct\hctstart.cmd ..\o1 ..\o2
+          mkdir o1
+          mkdir o2
+          $wp=(gl).Path
+          utils\hct\hctstart.cmd $wp\o1 $wp\o2
 
       - name: run build (ubuntu or mac)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
