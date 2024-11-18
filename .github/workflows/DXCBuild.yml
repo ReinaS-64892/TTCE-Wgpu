@@ -39,7 +39,8 @@ jobs:
       - name: build set up (windows)
         if: matrix.os == 'windows-latest'
         run: |
-          echo "どうすればいいんだろう...?"
+          mkdir ..\o1 ..\o2
+          utils\hct\hctstart.cmd ..\o1 ..\o2
 
       - name: run build (ubuntu or mac)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
