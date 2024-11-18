@@ -35,6 +35,12 @@ jobs:
           brew update
           brew install ninja
 
+      - name: cache
+        uses: actions/cache@v4
+        with:
+          path: dxc_build
+          key: ${{matrix.os}}_dxc_build
+
       - name: run build (ubuntu or mac)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
@@ -44,13 +50,6 @@ jobs:
           echo "--- build end ---"
 
           ls ./dxc_build
-
-      - name: cache (windows)
-        if: matrix.os == 'windows-latest'
-        uses: actions/cache@v4
-        with:
-          path: dxc_build
-          key: windows_dxc_build
 
       - name: setup to build (windows)
         if: matrix.os == 'windows-latest'
