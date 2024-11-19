@@ -9,3 +9,6 @@ TTCE-Wgpu.Tests/TestData
 ProjectPackages
 
 *.g.cs
+
+dxcompiler_build/*
+!dxcompiler_build/.gitkeep

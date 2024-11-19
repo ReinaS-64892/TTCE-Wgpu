@@ -9,6 +9,8 @@ internal class Program
 
     const string TTCE_WGPU_RUST_CORE_DLL = "ttce_wgpu_rust_core.dll";
     const string TTCE_WGPU_DLL = "net.rs64.ttce-wgpu.dll";
+    const string DIRECX_SHADER_COMPILER_DLL = "dxcompiler.dll";
+    const string DIRECX_SHADER_COMPILER_BUILD_DIR = "dxcompiler_build";
     const string UNITY_PACKAGE_META_DATA = "UnityPackageMetaData";
     /// <summary>
     /// ローカル環境向けのパッケージデプロイ用のスクリプトです。
@@ -19,18 +21,23 @@ internal class Program
         Console.WriteLine("Nya!");
         Console.WriteLine("ProjectPackages に対して TTCE-Wgpu の Package を作成しに行くよ～！");
 
+
         if (Path.GetFileName(Directory.GetCurrentDirectory()) is not "PackageDeploy") { Console.WriteLine($"CurrentDirectory がおかしいよ！！ {Directory.GetCurrentDirectory()}"); }
+
 
         Directory.SetCurrentDirectory("../");
         Console.WriteLine($"一つ上のディレクトリに移動 ... \"{Directory.GetCurrentDirectory()}\"");
+
 
         Console.Write("Packages への Symlink の存在確認 ... ");
         if (Directory.Exists(PROJECT_PACKAGES)) Console.WriteLine("Ok!");
         else { Console.WriteLine("Err!"); return; }
 
+
         Console.Write("Packages 内の TexTransTool の存在確認 ... ");
         if (Directory.Exists(Path.Combine(PROJECT_PACKAGES, TEXTRANSTOOL))) Console.WriteLine("Ok!");
         else { Console.WriteLine("Err!"); return; }
+
 
         Console.Write("dotnet の存在確認 ... ");
         using (var dotnetProc = Process.Start("dotnet", "--version"))
@@ -39,12 +46,14 @@ internal class Program
             if (dotnetProc.ExitCode != 0) { Console.WriteLine("Err!"); return; }
         }
 
+
         Console.Write("cargo の存在確認 ... ");
         using (var dotnetProc = Process.Start("cargo", "--version"))
         {
             dotnetProc.WaitForExit();
             if (dotnetProc.ExitCode != 0) { Console.WriteLine("Err!"); return; }
         }
+
 
         Console.WriteLine("TTCE-Wgpu build!");
 
@@ -72,15 +81,23 @@ internal class Program
         if (File.Exists(rustCoreDLLPath)) Console.WriteLine("Ok!");
         else { Console.WriteLine("Err!"); return; }
 
+        Console.Write("DirectXShaderCompiler DLL チェック ... ");
+        var directxShaderCompilerDLLPath = Path.Combine(DIRECX_SHADER_COMPILER_BUILD_DIR, DIRECX_SHADER_COMPILER_DLL);
+        if (File.Exists(directxShaderCompilerDLLPath)) Console.WriteLine("Ok!");
+        else { Console.WriteLine("Err!"); return; }
+
+
         Console.Write("UnityPackageMetaData の存在確認 ... ");
         if (Directory.Exists(Path.Combine(TTCE_WGPU, UNITY_PACKAGE_META_DATA))) Console.WriteLine("Ok!");
         else { Console.WriteLine("Err!"); return; }
+
 
         Console.Write("TTCE-Wgpu がすでに出力されているか ... ");
         var ttcePackagePath = Path.Combine(PROJECT_PACKAGES, TTCE_WGPU);
         var alreadyTTCE = Directory.Exists(ttcePackagePath);
         if (alreadyTTCE) Console.WriteLine("Some!");
         else Console.WriteLine("None!");
+
 
         if (alreadyTTCE)
         {
@@ -89,8 +106,10 @@ internal class Program
         }
         else { Console.WriteLine("Skip remove TTCE-Wgpu package"); }
 
+
         Console.WriteLine("Create TTCE-Wgpu package directory");
         Directory.CreateDirectory(ttcePackagePath);
+
 
         Console.WriteLine("Copy UnityPackage meta data");
         foreach (var filePath in Directory.GetFiles(Path.Combine(TTCE_WGPU, UNITY_PACKAGE_META_DATA)))
@@ -98,6 +117,8 @@ internal class Program
             Console.Write($" {Path.GetFileName(filePath)} ");
             File.Copy(filePath, Path.Combine(ttcePackagePath, Path.GetFileName(filePath)));
         }
+
+
         Console.WriteLine("");
         Console.WriteLine("Copy Scripts");
         foreach (var filePath in Directory.GetFiles(Path.Combine(TTCE_WGPU)))
@@ -107,10 +128,15 @@ internal class Program
             Console.Write($" {Path.GetFileName(filePath)} ");
             File.Copy(filePath, Path.Combine(ttcePackagePath, Path.GetFileName(filePath)));
         }
+
+
         Console.WriteLine("");
         Console.WriteLine("Copy DLLs");
         Console.Write($" {Path.GetFileName(rustCoreDLLPath)} ");
         File.Copy(rustCoreDLLPath, Path.Combine(ttcePackagePath, Path.GetFileName(rustCoreDLLPath)));
+        Console.Write($" {Path.GetFileName(directxShaderCompilerDLLPath)} ");
+        File.Copy(directxShaderCompilerDLLPath, Path.Combine(ttcePackagePath, Path.GetFileName(directxShaderCompilerDLLPath)));
+
 
         Console.WriteLine("");
         Console.WriteLine("Exit!");
