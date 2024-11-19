@@ -23,7 +23,13 @@
   </Target>
 
   <ItemGroup>
-    <Content Include="..\ttce-wgpu-rust-core\target\debug\ttce_wgpu_rust_core.dll">
+    <Content Include="..\ttce-wgpu-rust-core\target\debug\ttce_wgpu_rust_core.dll" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' ">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\ttce-wgpu-rust-core\target\debug\libttce_wgpu_rust_core.so" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' ">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\ttce-wgpu-rust-core\target\debug\libttce_wgpu_rust_core.dylib" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' ">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

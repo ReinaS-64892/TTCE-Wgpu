@@ -1,0 +1,83 @@
+name: CreatePackage
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+
+
+jobs:
+  rust-core-build:
+    uses: ./.github/workflows/RustCoreBuild.yml
+    with:
+      ref: ${{ github.event.inputs.ref }}
+  create-package:
+    runs-on: ubuntu-latest
+    needs: [rust-core-build]
+    steps:
+      - name: checkout TTCE-Wgpu
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: mkdir
+        run: |
+          mkdir ProjectPackages
+          cd ProjectPackages
+          mkdir TTCE-Wgpu
+
+      - name: deploy ttce-wgpu-rust-core
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rust-core-*
+          merge-multiple: true
+          path: ProjectPackages/TTCE-Wgpu
+
+      - uses: robinraju/release-downloader@v1
+        with:
+          repository: ReinaS-64892/DXC-Binary
+          latest: true
+          fileName: dxcompiler_build.zip
+          out-file-path: dxcompiler_build
+
+      - name: unzip dxcompiler
+        run: |
+          cd dxcompiler_build
+          unzip dxcompiler_build.zip
+          rm dxcompiler_build.zip
+
+      - name: deploy dxcompiler
+        run: |
+          cp dxcompiler_build/* ProjectPackages/TTCE-Wgpu/
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ttce-wgpu-rust-core -> target
+
+      - name: generate cs binding
+        run: |
+          cd ttce-wgpu-rust-core
+          cargo build --release
+
+      - name: deploy TTCE-Wgpu (c#)
+        run: |
+          cp TTCE-Wgpu/*.cs ProjectPackages/TTCE-Wgpu/
+
+      - name: deploy TTCE-Wgpu (unity package meta data)
+        run: |
+          cp TTCE-Wgpu/UnityPackageMetaData/* ProjectPackages/TTCE-Wgpu/
+
+      - name: copy license file
+        run: |
+          cp LICENSE ProjectPackages/TTCE-Wgpu/
+
+      - name: create zip
+        run: |
+          cd ProjectPackages/TTCE-Wgpu
+          zip -r TTCE-Wgpu.zip ./*
+      - name: Upload-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TTCE-Wgpu
+          path: ProjectPackages/TTCE-Wgpu/TTCE-Wgpu.zip

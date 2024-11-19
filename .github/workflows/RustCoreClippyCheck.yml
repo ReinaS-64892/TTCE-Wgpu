@@ -1,0 +1,20 @@
+name: RustCoreClippyCheck
+on: push
+
+jobs:
+  clippy-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ttce-wgpu-rust-core -> target
+
+      - name: Run Clippy
+        run: |
+          cd ttce-wgpu-rust-core
+          cargo clippy

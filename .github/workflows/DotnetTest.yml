@@ -1,0 +1,70 @@
+name: DotnetTest
+on: push
+
+env:
+  RUST_BACKTRACE: full
+
+jobs:
+  dotnet-test-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ttce-wgpu-rust-core -> target
+
+      - uses: dtolnay/rust-toolchain@stable
+      - name: RustCore Build to Genereate csbinding
+        run: |
+          cd ttce-wgpu-rust-core
+          cargo build
+
+      - name: Create ProjectPackages directory
+        run: |
+          mkdir ProjectPackages
+      - uses: actions/checkout@v4
+        with:
+          repository: ReinaS-64892/TexTransTool
+          ref: Improved-TexTransCore
+          path: ProjectPackages/TexTransTool
+
+      - name: Debug output
+        run: |
+          ls
+          echo "---"
+          cd ProjectPackages
+          ls
+          echo "---"
+          cd TexTransTool
+          ls
+          echo "---"
+          cd ../..
+          pwd
+          echo "---"
+          ls
+
+      - name: valkan setup
+        run: |
+          sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
+
+
+      - uses: robinraju/release-downloader@v1
+        with:
+          repository: ReinaS-64892/DXC-Binary
+          latest: true
+          fileName: dxcompiler_build.zip
+          out-file-path: dxcompiler_build
+
+      - name: unzip dxcompiler
+        run: |
+          cd dxcompiler_build
+          unzip dxcompiler_build.zip
+          ls
+
+
+      - uses: actions/setup-dotnet@v4
+      - name: Run test
+        run: |
+          cd TTCE-Wgpu.Tests
+          dotnet test
