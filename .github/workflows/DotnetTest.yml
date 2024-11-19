@@ -56,9 +56,12 @@ jobs:
           fileName: dxcompiler_build.zip
           out-file-path: dxcompiler_build
 
-      - name: setup dxc compiler debug
+      - name: unzip dxcompiler
         run: |
-          ls dxcompiler_build
+          cd dxcompiler_build
+          unzip dxcompiler_build.zip
+          ls
+
 
       - uses: actions/setup-dotnet@v4
       - name: Run test
