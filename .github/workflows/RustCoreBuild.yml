@@ -1,7 +1,6 @@
 name: RustCoreBuild
 
 on:
-  push:
   workflow_call:
     inputs:
       ref:
