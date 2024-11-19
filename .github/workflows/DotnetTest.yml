@@ -20,7 +20,6 @@ jobs:
           cd ttce-wgpu-rust-core
           cargo build
 
-
       - name: Create ProjectPackages directory
         run: |
           mkdir ProjectPackages
@@ -49,15 +48,17 @@ jobs:
         run: |
           sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
 
-      - name: setup dxc compiler
+
+      - uses: robinraju/release-downloader@v1
+        with:
+          repository: ReinaS-64892/DXC-Binary
+          latest: true
+          fileName: dxcompiler_build.zip
+          out-file-path: dxcompiler_build
+
+      - name: setup dxc compiler debug
         run: |
-          mkdir dxc
-          cd dxc
-          curl -L https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2407/linux_dxc_2024_07_31.x86_64.tar.gz -o ./linux_dxc.tar.gz
-          tar -zxf linux_dxc.tar.gz
-          cd lib
-          pwd
-          ls
+          ls dxcompiler_build
 
       - uses: actions/setup-dotnet@v4
       - name: Run test
