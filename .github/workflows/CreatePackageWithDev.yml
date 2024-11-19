@@ -1,0 +1,10 @@
+name: CreatePackageWithDev
+on: push
+
+
+jobs:
+  create-package-with-dev:
+    uses: ./.github/workflows/CreatePackage.yml
+    with:
+      ref: ${{ github.sha }}
+

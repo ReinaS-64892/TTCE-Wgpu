@@ -1,6 +1,12 @@
 name: RustCoreBuild
 
-on: [push, workflow_call, workflow_dispatch]
+on:
+  push:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
 
 env:
   CARGO_INCREMENTAL: 0
@@ -14,6 +20,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        if: ${{ github.event_name }} == 'push'
+      - uses: actions/checkout@v4
+        if: ${{ github.event_name }} != 'push'
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
