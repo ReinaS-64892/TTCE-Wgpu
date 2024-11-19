@@ -57,7 +57,7 @@ jobs:
       - name: generate cs bindig
         run: |
           cd ttce-wgpu-rust-core
-          cargo build --release --verbose
+          cargo build --release
 
       - name: deploy TTCE-Wgpu (c#)
         run: |
@@ -69,5 +69,5 @@ jobs:
       - name: Upload-artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TTCE-Wgpu.zip
+          name: TTCE-Wgpu
           path: ProjectPackages/TTCE-Wgpu.zip
