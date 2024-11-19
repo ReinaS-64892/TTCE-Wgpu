@@ -56,7 +56,10 @@ internal class Program
 
         Console.WriteLine("");
         Console.WriteLine("Write TTT version");
-        SetTTTDependencyVersion.Run();
+        SetTTTDependencyVersion.WriteTTTDependVersion();
+        Console.WriteLine("Write TTCE-Wgpu version");
+        SetTTTDependencyVersion.WriteTTTDependentTTCEWgpuVersion();
+        Console.WriteLine("");
 
 
         Console.WriteLine("TTCE-Wgpu build!");
