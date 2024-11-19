@@ -64,6 +64,10 @@ jobs:
         run: |
           cp TTCE-Wgpu/*.cs ProjectPackages/TTCE-Wgpu/
 
+      - name: deploy TTCE-Wgpu (unity package meta data)
+        run: |
+          cp TTCE-Wgpu/UnityPackageMetaData/* ProjectPackages/TTCE-Wgpu/
+
       - name: copy license file
         run: |
           cp LICENSE ProjectPackages/TTCE-Wgpu/
