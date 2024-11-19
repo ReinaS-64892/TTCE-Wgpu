@@ -45,6 +45,7 @@ jobs:
         run: |
           cd dxcompiler_build
           unzip dxcompiler_build.zip
+          rm dxcompiler_build.zip
 
       - name: deploy dxcompiler
         run: |
@@ -65,9 +66,10 @@ jobs:
 
       - name: create zip
         run: |
-          zip -r ProjectPackages/TTCE-Wgpu.zip ProjectPackages/TTCE-Wgpu/*
+          cd ProjectPackages/TTCE-Wgpu
+          zip -r TTCE-Wgpu.zip ./*
       - name: Upload-artifact
         uses: actions/upload-artifact@v4
         with:
           name: TTCE-Wgpu
-          path: ProjectPackages/TTCE-Wgpu.zip
+          path: ProjectPackages/TTCE-Wgpu/TTCE-Wgpu.zip
