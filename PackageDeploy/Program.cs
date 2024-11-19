@@ -54,6 +54,10 @@ internal class Program
             if (dotnetProc.ExitCode != 0) { Console.WriteLine("Err!"); return; }
         }
 
+        Console.WriteLine("");
+        Console.WriteLine("Write TTT version");
+        SetTTTDependencyVersion.Run();
+
 
         Console.WriteLine("TTCE-Wgpu build!");
 

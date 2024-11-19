@@ -55,7 +55,7 @@ jobs:
         with:
           workspaces: ttce-wgpu-rust-core -> target
 
-      - name: generate cs bindig
+      - name: generate cs binding
         run: |
           cd ttce-wgpu-rust-core
           cargo build --release
