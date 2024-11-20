@@ -83,6 +83,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public void DownloadTexture<T>(Span<T> dataDist, TexTransCore.TexTransCoreTextureFormat format, TTRenderTexture source) where T : unmanaged
         {
             if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
+            if(source.GetWidth() < 64 || source.GetHeight() < 64){throw new InvalidOperationException("Texture downloading of 64x64 or above are allowed.");}
 
             unsafe
             {
