@@ -15,7 +15,7 @@ public class TestTTCEWgpuEngine : IDisposable
     {
         Device = new TTCEWgpuDevice();
         Device.SetDefaultTextureFormat(defaultFormat);
-        _shaderDict = ShaderFinder.RegisterShaders(Device, ShaderFinder.GetAllShaderPathWithCurrentDirectory());
+        _shaderDict = ShaderFinder.RegisterShaders(Device, ShaderFinder.GetAllShaderPathWithCurrentDirectory(), ShaderFinder.CurrentDirectoryFind);
         // _debugLogHandler = new TTCEWgpuRCDebugPrintToConsole();
         _debugLogHandler = null;
     }

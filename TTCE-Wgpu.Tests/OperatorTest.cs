@@ -86,7 +86,7 @@ public class OperatorTest
 
     [Theory]
     [ClassData(typeof(TestTTCEWgpuEngineData))]
-    public void BilinearRescalingTest(TestTTCEWgpuEngine device)
+    public void DefaultResizingTest(TestTTCEWgpuEngine device)
     {
         using var ctx = device.GetCtx();
 
@@ -97,7 +97,7 @@ public class OperatorTest
         using var rt = ctx.CreateRenderTexture(64, 64);
         using var rt2 = ctx.CreateRenderTexture(128, 128);
         ctx.ColorFill(rt, color);
-        ctx.BilinearReScaling(rt2, rt);
+        ctx.DefaultResizing(rt2, rt);
 
         ctx.DownloadTexture(dataSpan, TexTransCoreTextureFormat.Float, rt2);
 
