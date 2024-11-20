@@ -7,7 +7,7 @@ use std::{ffi::c_void, ops::Deref, sync::Mutex};
 use compute_shader::{TTComputeHandler, TTComputeShaderID};
 use once_cell::sync::OnceCell;
 use render_texture::TTRenderTexture;
-use tex_trans_core_engine::{TexTransCoreEngineDevice, TexTransCoreEngineContext};
+use tex_trans_core_engine::{TexTransCoreEngineContext, TexTransCoreEngineDevice};
 use wgpu::{Backends, DeviceType};
 
 static DEBUG_LOG: Mutex<Option<unsafe extern "C" fn(*const u16, i32) -> ()>> = Mutex::new(None);
@@ -132,7 +132,6 @@ pub unsafe extern "C" fn drop_tex_trans_core_engine_device(tex_trans_core_engine
     let _ = Box::from_raw(tex_trans_core_engine_ptr as *mut TexTransCoreEngineDevice);
 }
 
-
 /// tex_trans_core_engine_ptr は TexTransCoreEngineDevice のポインターでないといけない。
 /// TexTransCoreEngineDevice に内部的に使用するフォーマットコンバータを生成させる。
 /// set_default_texture_format と同様、処理を始める前やしていないタイミングで行うように。
@@ -151,6 +150,7 @@ pub extern "C" fn register_format_convertor(tex_trans_core_engine_ptr: *mut c_vo
 /// # Safety
 /// tex_trans_core_engine_ptr は TexTransCoreEngineDevice のポインターでないといけない。
 /// 任意の HLSL を UTF16 (C# string) をコンピュートシェーダーとして登録させることができ、hlsl_path_source は null pointer でもよい。
+/// 戻り値の値は result が true の時しか使用してはならない。 false の場合は何らかの理由で失敗している。ログに出力されたものを見るように。
 #[no_mangle]
 pub unsafe extern "C" fn register_compute_shader_from_hlsl(
     tex_trans_core_engine_ptr: *mut c_void,
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn register_compute_shader_from_hlsl(
     hlsl_path_str_len: i32,
     hlsl_path_source: *const u16,
     hlsl_path_source_str_len: i32,
-) -> u32 {
+) -> RegisterCSResult {
     let engine = (tex_trans_core_engine_ptr as *mut TexTransCoreEngineDevice)
         .as_mut()
         .unwrap();
@@ -177,14 +177,29 @@ pub unsafe extern "C" fn register_compute_shader_from_hlsl(
         .unwrap()
     });
 
-    let id = engine
-        .register_compute_shader_from_hlsl(
-            hlsl_path_rust_string.as_str(),
-            source_slice_rust_string_opt.as_deref(),
-        )
-        .unwrap();
+    let try_id = engine.register_compute_shader_from_hlsl(
+        hlsl_path_rust_string.as_str(),
+        source_slice_rust_string_opt.as_deref(),
+    );
 
-    *id.deref()
+    match try_id {
+        Ok(id) => RegisterCSResult {
+            result: true,
+            compute_shader_id: *id.deref(),
+        },
+        Err(err) => {
+            debug_log(err.to_string().as_str());
+            RegisterCSResult {
+                result: false,
+                compute_shader_id: 0,
+            }
+        }
+    }
+}
+#[repr(C)]
+pub struct RegisterCSResult {
+    result: bool,
+    compute_shader_id: u32,
 }
 
 // TexTransCoreEngineContext

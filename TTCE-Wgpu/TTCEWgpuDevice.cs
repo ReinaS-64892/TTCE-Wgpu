@@ -57,8 +57,9 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                     fixed (char* pathPtr = hlslPath)
                     fixed (char* sourcePtr = hlslSource)
                     {
-                        var id = NativeMethod.register_compute_shader_from_hlsl((void*)_handler.DangerousGetHandle(), (ushort*)pathPtr, hlslPath.Length, (ushort*)sourcePtr, hlslSource.Length);
-                        return new TTComputeShaderID(id);
+                        var idResult = NativeMethod.register_compute_shader_from_hlsl((void*)_handler.DangerousGetHandle(), (ushort*)pathPtr, hlslPath.Length, (ushort*)sourcePtr, hlslSource.Length);
+                        if (idResult.result is false) { throw new Exception("register hlsl failed!, Please see log! \nSourceHLSLPath:" + hlslPath + "\nHLSLSource\n" + hlslSource); }
+                        return new TTComputeShaderID(idResult.compute_shader_id);
                     }
                 }
             else
@@ -66,8 +67,9 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 {
                     fixed (char* pathPtr = hlslPath)
                     {
-                        var id = NativeMethod.register_compute_shader_from_hlsl((void*)_handler.DangerousGetHandle(), (ushort*)pathPtr, hlslPath.Length, (ushort*)IntPtr.Zero, 0);
-                        return new TTComputeShaderID(id);
+                        var idResult = NativeMethod.register_compute_shader_from_hlsl((void*)_handler.DangerousGetHandle(), (ushort*)pathPtr, hlslPath.Length, (ushort*)IntPtr.Zero, 0);
+                        if (idResult.result is false) { throw new Exception("register hlsl failed!, Please see log! \nSourceHLSLPath:" + hlslPath + "\nSource is original file text"); }
+                        return new TTComputeShaderID(idResult.compute_shader_id);
                     }
                 }
         }

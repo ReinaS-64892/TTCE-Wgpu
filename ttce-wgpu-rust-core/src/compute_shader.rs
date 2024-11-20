@@ -8,7 +8,6 @@ use std::path::PathBuf;
 use wgpu::util::DeviceExt;
 use wgpu::{ComputePipeline, ShaderModule};
 
-use crate::debug_log;
 use crate::render_texture::TTRenderTexture;
 use crate::tex_trans_core_engine::{TexTransCoreEngineDevice, TexTransCoreEngineContext};
 
@@ -85,8 +84,8 @@ impl TexTransCoreEngineDevice {
                 crate::TexTransCoreTextureChannel::RGBA,
             ),
         );
-        debug_log(operator_name.as_str());
-        debug_log(compile_target_code.as_str());
+        // debug_log(operator_name.as_str());
+        // debug_log(compile_target_code.as_str());
 
         let cs_module = self
             .device
