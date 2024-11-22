@@ -143,6 +143,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             {
                 TTCEWgpuRustCoreDebug.DebugLog += Console.WriteLine;
                 TTCEWgpuRustCoreDebug.LogHandlerInitialize();
+                _isDisposed = false;
             }
             s_count += 1;
         }
