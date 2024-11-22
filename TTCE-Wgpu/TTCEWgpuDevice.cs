@@ -68,7 +68,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                     fixed (char* pathPtr = hlslPath)
                     {
                         var idResult = NativeMethod.register_compute_shader_from_hlsl((void*)_handler.DangerousGetHandle(), (ushort*)pathPtr, hlslPath.Length, (ushort*)IntPtr.Zero, 0);
-                        if (idResult.result is false) { throw new Exception("register hlsl failed!, Please see log! \nSourceHLSLPath:" + hlslPath + "\nSource is original file text"); }
+                        if (idResult.result is false) { throw new Exception("register hlsl failed!, Please see log! \nSourceHLSLPath:" + hlslPath + "\nSource is file original text"); }
                         return new TTComputeShaderID(idResult.compute_shader_id);
                     }
                 }
