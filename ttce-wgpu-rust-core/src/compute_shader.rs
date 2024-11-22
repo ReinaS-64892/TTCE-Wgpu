@@ -8,8 +8,9 @@ use std::path::PathBuf;
 use wgpu::util::DeviceExt;
 use wgpu::{ComputePipeline, ShaderModule};
 
+use crate::debug_log;
 use crate::render_texture::TTRenderTexture;
-use crate::tex_trans_core_engine::{TexTransCoreEngineDevice, TexTransCoreEngineContext};
+use crate::tex_trans_core_engine::{TexTransCoreEngineContext, TexTransCoreEngineDevice};
 
 #[derive(Debug)]
 pub struct TTComputeShader {
@@ -59,19 +60,14 @@ impl TexTransCoreEngineDevice {
             }
         };
 
-        let spv_result = hassle_rs::compile_hlsl(
+        let spv = hassle_rs::compile_hlsl(
             hlsl_file_path,
             hlsl_string.as_str(),
             "CSMain",
             "cs_6_0",
             &["-spirv", "-HV 2018"],
             &[],
-        );
-
-        if let Err(er) = spv_result {
-            return Err(Box::new(er));
-        }
-        let spv = spv_result.unwrap();
+        )?;
 
         let (wgsl_string, bindings, wg_size) = spv_to_wgsl_and_binding_descriptor(spv)?;
         let bind_map = HashMap::<String, u32>::from_iter(bindings);
@@ -84,8 +80,6 @@ impl TexTransCoreEngineDevice {
                 crate::TexTransCoreTextureChannel::RGBA,
             ),
         );
-        // debug_log(operator_name.as_str());
-        // debug_log(compile_target_code.as_str());
 
         let cs_module = self
             .device
@@ -226,12 +220,8 @@ impl<'ctx> TexTransCoreEngineContext<'ctx> {
 pub(crate) fn spv_to_wgsl_and_binding_descriptor(
     spv: Vec<u8>,
 ) -> Result<(String, Vec<(String, u32)>, WorkGroupSize), Box<dyn Error>> {
-    let naga_il_parse_result =
-        naga::front::spv::parse_u8_slice(&spv, &naga::front::spv::Options::default());
-    if let Err(er) = naga_il_parse_result {
-        return Err(Box::new(er));
-    }
-    let mut naga_il = naga_il_parse_result.unwrap();
+    let mut naga_il =
+        naga::front::spv::parse_u8_slice(&spv, &naga::front::spv::Options::default())?;
 
     for e in naga_il.entry_points.iter_mut() {
         if e.workgroup_size == [32, 32, 1] {
@@ -257,8 +247,9 @@ pub(crate) fn spv_to_wgsl_and_binding_descriptor(
             if gv.name.is_none() || gv.binding.is_none() {
                 return None;
             }
-            if gv.binding.as_ref().unwrap().group != 0 {
-                panic!("not supported binding group is not 0")
+            if gv.binding.as_ref()?.group != 0 {
+                debug_log("not supported binding group is not 0");
+                return None;
             }
 
             Some((
@@ -274,21 +265,13 @@ pub(crate) fn spv_to_wgsl_and_binding_descriptor(
         naga::valid::ValidationFlags::empty(),
         naga::valid::Capabilities::empty(),
     );
-    let validate_info_result = validator.validate(&naga_il);
-    if let Err(er) = validate_info_result {
-        return Err(Box::new(er));
-    }
-    let validate_info = validate_info_result.unwrap();
-    let convert_wgsl_string_result = naga::back::wgsl::write_string(
+    let validate_info = validator.validate(&naga_il)?;
+
+    let wgsl_string_with_32float = naga::back::wgsl::write_string(
         &naga_il,
         &validate_info,
         naga::back::wgsl::WriterFlags::empty(),
-    );
-    if let Err(er) = convert_wgsl_string_result {
-        return Err(Box::new(er));
-    }
-
-    let wgsl_string_with_32float = convert_wgsl_string_result.unwrap();
+    )?;
 
     Ok((wgsl_string_with_32float, bindings, wg_size))
 }
