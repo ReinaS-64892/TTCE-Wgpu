@@ -2,10 +2,11 @@ using net.rs64.TexTransCore;
 using net.rs64.TexTransCoreEngineForWgpu;
 using net.rs64.TexTransCoreEngineForWgpu.Tests;
 
+
 Console.WriteLine("Test Run");
 
 
-using var engineTest = new TestTTCEWgpuEngine();
+using var engineTest = new TestTTCEWgpuEngine(TexTransCoreTextureFormat.Byte, true);
 var ctx = engineTest.GetCtx();
 
 // using var rt = ctx.CreateRenderTexture(64, 256);
