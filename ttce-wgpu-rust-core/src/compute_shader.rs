@@ -1,16 +1,20 @@
 use std::collections::HashMap;
-use std::error::Error;
 use std::fs::File;
 use std::io::Read;
 use std::ops::Deref;
 use std::path::PathBuf;
 
+use naga::TypeInner::{self, Image};
+use naga::{
+    Arena, Block, Expression, ImageClass, ImageDimension, Module, Span, StorageFormat,
+    SwizzleComponent, UniqueArena,
+};
 use wgpu::util::DeviceExt;
 use wgpu::{ComputePipeline, ShaderModule};
 
-use crate::debug_log;
 use crate::render_texture::TTRenderTexture;
 use crate::tex_trans_core_engine::{TexTransCoreEngineContext, TexTransCoreEngineDevice};
+use crate::{debug_log, TexTransCoreTextureFormat};
 
 #[derive(Debug)]
 pub struct TTComputeShader {
@@ -66,26 +70,48 @@ impl TexTransCoreEngineDevice {
             "CSMain",
             "cs_6_0",
             &["-spirv", "-HV 2018"],
+            // &["-spirv", "-HV 2018","-O0"],
             &[],
         )?;
 
-        let (wgsl_string, bindings, wg_size) = spv_to_wgsl_and_binding_descriptor(spv)?;
-        let bind_map = HashMap::<String, u32>::from_iter(bindings);
+        let mut naga_ir =
+            naga::front::spv::parse_u8_slice(&spv, &naga::front::spv::Options::default())?;
 
-        // println!("{}", wgsl_string);
-        let compile_target_code = convert_wgsl_format(
-            wgsl_string,
-            TTRenderTexture::to_wgpu_texture_format(
-                self.default_texture_format(),
-                crate::TexTransCoreTextureChannel::RGBA,
-            ),
+        fix_storage_texture_format(&mut naga_ir, self.default_texture_format());
+        fix_store_value_type(&mut naga_ir);
+        clamp_work_group_size(&mut naga_ir);
+
+        let wg_size = get_work_group_size(&naga_ir);
+        let bind_map = HashMap::<String, u32>::from_iter(get_bindings(&naga_ir));
+
+        let mut validator = naga::valid::Validator::new(
+            naga::valid::ValidationFlags::empty(),
+            // naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::STORAGE_TEXTURE_16BIT_NORM_FORMATS,
         );
+        let validate_info = validator.validate(&naga_ir)?;
+
+        let wgsl_string = naga::back::wgsl::write_string(
+            &naga_ir,
+            &validate_info,
+            naga::back::wgsl::WriterFlags::empty(),
+        )?;
+
+        // debug_log(operator_name.as_str());
+        // debug_log(format!("{:?}", naga_il).as_str());
+        // debug_log(wgsl_string.as_str());
+
+        // できるならここで naga-ir のまま渡したかったけど、
+        // `Used by a statement before it was introduced into the scope by any of the dominating blocks` というエラーが発生してできなかった
+        // 解決できるならしたいが...私にはわからなかったのでいったん断念。
+        // Wgsl に書き出してから読ませると解決する、ごり押しもいいところ。
 
         let cs_module = self
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some((String::from("shade module with ") + &operator_name).as_str()),
-                source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&compile_target_code)),
+                // source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(naga_il)),
+                source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Owned(wgsl_string)),
             });
         let compute_pipeline =
             self.device
@@ -216,29 +242,156 @@ impl<'ctx> TexTransCoreEngineContext<'ctx> {
         })
     }
 }
-#[allow(clippy::type_complexity)]
-pub(crate) fn spv_to_wgsl_and_binding_descriptor(
-    spv: Vec<u8>,
-) -> Result<(String, Vec<(String, u32)>, WorkGroupSize), Box<dyn Error>> {
-    let mut naga_il =
-        naga::front::spv::parse_u8_slice(&spv, &naga::front::spv::Options::default())?;
 
-    for e in naga_il.entry_points.iter_mut() {
-        if e.workgroup_size == [32, 32, 1] {
-            e.workgroup_size = [16, 16, 1]
+fn fix_storage_texture_format(naga_ir: &mut Module, tt_format: TexTransCoreTextureFormat) {
+    for gv in naga_ir.global_variables.iter_mut() {
+        let ref_gv = gv.1;
+
+        let origin_type = &naga_ir.types[ref_gv.ty];
+
+        let Image {
+            dim: id,
+            arrayed: ad,
+            class: ic,
+        } = origin_type.inner
+        else {
+            continue;
+        };
+        if ad || id != ImageDimension::D2 {
+            continue;
+        }
+
+        let naga::ImageClass::Storage {
+            format: fm,
+            access: ac,
+        } = ic
+        else {
+            continue;
+        };
+
+        if fm != StorageFormat::Rgba32Float {
+            continue;
+        }
+
+        let new_type = naga::Type {
+            name: origin_type.name.clone(),
+            inner: Image {
+                dim: id,
+                arrayed: ad,
+                class: ImageClass::Storage {
+                    format: TTRenderTexture::to_naga_storage_texture_format(
+                        tt_format,
+                        crate::TexTransCoreTextureChannel::RGBA,
+                    ),
+                    access: ac,
+                },
+            },
+        };
+
+        ref_gv.ty = naga_ir
+            .types
+            .insert(new_type, naga_ir.types.get_span(ref_gv.ty));
+    }
+}
+
+fn fix_store_value_type(naga_ir: &mut Module) {
+    for f in naga_ir.functions.iter_mut() {
+        fix_block_impl(
+            &mut f.1.expressions,
+            &naga_ir.global_variables,
+            &naga_ir.types,
+            &mut f.1.body,
+        );
+    }
+    fn fix_block_impl(
+        exp: &mut Arena<Expression>,
+        gv: &Arena<naga::GlobalVariable>,
+        ty: &UniqueArena<naga::Type>,
+        b: &mut Block,
+    ) {
+        for i in 0..b.len() {
+            let st = &mut b[i];
+            // println!("{:?}", st);
+            match st {
+                naga::Statement::ImageStore {
+                    image,
+                    coordinate: _,
+                    array_index: _,
+                    value,
+                } => {
+                    // println!("{:?}", exp.get_mut(*image));
+                    // println!("{:?}", exp.get_mut(value));
+
+                    let format = if let Expression::GlobalVariable(gv_h) = exp.get_mut(*image) {
+                        let a = gv.try_get(*gv_h).unwrap();
+                        let gv_type = ty.get_handle(a.ty).unwrap();
+                        if let TypeInner::Image {
+                            dim: _,
+                            arrayed: _,
+                            class: ImageClass::Storage { format, access: _ },
+                        } = gv_type.inner
+                        {
+                            format
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    };
+
+                    let sw = match format {
+                        StorageFormat::R32Float => Expression::Swizzle {
+                            size: naga::VectorSize::Quad,
+                            vector: *value,
+                            pattern: [
+                                SwizzleComponent::X,
+                                SwizzleComponent::X,
+                                SwizzleComponent::X,
+                                SwizzleComponent::X,
+                            ],
+                        },
+                        StorageFormat::Rg32Float => Expression::Swizzle {
+                            size: naga::VectorSize::Quad,
+                            vector: *value,
+                            pattern: [
+                                SwizzleComponent::X,
+                                SwizzleComponent::Y,
+                                SwizzleComponent::Y,
+                                SwizzleComponent::Y,
+                            ],
+                        },
+                        _ => continue,
+                    };
+
+                    *value = exp.append(sw, Span::UNDEFINED);
+
+                    println!("{:?}", value);
+                }
+                naga::Statement::Block(block) => fix_block_impl(exp, gv, ty, block),
+                naga::Statement::If {
+                    condition: _,
+                    accept,
+                    reject,
+                } => {
+                    fix_block_impl(exp, gv, ty, accept);
+                    fix_block_impl(exp, gv, ty, reject);
+                }
+                naga::Statement::Loop {
+                    body,
+                    continuing,
+                    break_if: _,
+                } => {
+                    fix_block_impl(exp, gv, ty, body);
+                    fix_block_impl(exp, gv, ty, continuing);
+                }
+                _ => continue,
+            }
         }
     }
+}
 
-    let entry = naga_il.entry_points.first().unwrap();
-    let wg_size = WorkGroupSize {
-        x: entry.workgroup_size[0],
-        y: entry.workgroup_size[1],
-        z: entry.workgroup_size[2],
-    };
-
-    // println!("{:?}", naga_il);
-
-    let bindings: Vec<_> = naga_il
+fn get_bindings(naga_ir: &Module) -> Vec<(String, u32)> {
+    let bindings: Vec<_> = naga_ir
         .global_variables
         .iter()
         .filter_map(|gv_h| {
@@ -260,20 +413,25 @@ pub(crate) fn spv_to_wgsl_and_binding_descriptor(
             ))
         })
         .collect();
+    bindings
+}
 
-    let mut validator = naga::valid::Validator::new(
-        naga::valid::ValidationFlags::empty(),
-        naga::valid::Capabilities::empty(),
-    );
-    let validate_info = validator.validate(&naga_il)?;
+fn get_work_group_size(naga_ir: &Module) -> WorkGroupSize {
+    let entry = naga_ir.entry_points.first().unwrap();
 
-    let wgsl_string_with_32float = naga::back::wgsl::write_string(
-        &naga_il,
-        &validate_info,
-        naga::back::wgsl::WriterFlags::empty(),
-    )?;
+    WorkGroupSize {
+        x: entry.workgroup_size[0],
+        y: entry.workgroup_size[1],
+        z: entry.workgroup_size[2],
+    }
+}
 
-    Ok((wgsl_string_with_32float, bindings, wg_size))
+fn clamp_work_group_size(naga_ir: &mut Module) {
+    for e in naga_ir.entry_points.iter_mut() {
+        if e.workgroup_size == [32, 32, 1] {
+            e.workgroup_size = [16, 16, 1]
+        }
+    }
 }
 
 fn convert_wgsl_format(str: String, format: wgpu::TextureFormat) -> String {

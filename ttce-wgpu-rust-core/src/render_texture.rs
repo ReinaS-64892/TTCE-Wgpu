@@ -1,10 +1,9 @@
-use std::{collections::HashMap, ops::Deref, time::Instant};
+use std::{collections::HashMap, ops::Deref};
 
 use crate::{
     compute_shader::{AsTypeStr, TTComputeShader, TTComputeShaderID, WorkGroupSize},
-    debug_log,
     tex_trans_core_engine::{
-        RequestFormat, TTRtRequestDescriptor, TexTransCoreEngineDevice, TexTransCoreEngineContext,
+        RequestFormat, TTRtRequestDescriptor, TexTransCoreEngineContext, TexTransCoreEngineDevice,
     },
     TexTransCoreTextureChannel, TexTransCoreTextureFormat,
 };
@@ -133,6 +132,53 @@ impl TTRenderTexture {
             }
             (TexTransCoreTextureFormat::Float, TexTransCoreTextureChannel::RGBA) => {
                 wgpu::TextureFormat::Rgba32Float
+            }
+        }
+    }
+
+    pub(crate) fn to_naga_storage_texture_format(
+        format: TexTransCoreTextureFormat,
+        channel: TexTransCoreTextureChannel,
+    ) -> naga::StorageFormat {
+        match (format, channel) {
+            (TexTransCoreTextureFormat::Byte, TexTransCoreTextureChannel::R) => {
+                naga::StorageFormat::R8Unorm
+            }
+            (TexTransCoreTextureFormat::Byte, TexTransCoreTextureChannel::RG) => {
+                naga::StorageFormat::Rg8Unorm
+            }
+            (TexTransCoreTextureFormat::Byte, TexTransCoreTextureChannel::RGBA) => {
+                naga::StorageFormat::Rgba8Unorm
+            }
+
+            (TexTransCoreTextureFormat::UShort, TexTransCoreTextureChannel::R) => {
+                naga::StorageFormat::R16Unorm
+            }
+            (TexTransCoreTextureFormat::UShort, TexTransCoreTextureChannel::RG) => {
+                naga::StorageFormat::Rg16Unorm
+            }
+            (TexTransCoreTextureFormat::UShort, TexTransCoreTextureChannel::RGBA) => {
+                naga::StorageFormat::Rgba16Unorm
+            }
+
+            (TexTransCoreTextureFormat::Half, TexTransCoreTextureChannel::R) => {
+                naga::StorageFormat::R16Float
+            }
+            (TexTransCoreTextureFormat::Half, TexTransCoreTextureChannel::RG) => {
+                naga::StorageFormat::Rg16Float
+            }
+            (TexTransCoreTextureFormat::Half, TexTransCoreTextureChannel::RGBA) => {
+                naga::StorageFormat::Rgba16Float
+            }
+
+            (TexTransCoreTextureFormat::Float, TexTransCoreTextureChannel::R) => {
+                naga::StorageFormat::R32Float
+            }
+            (TexTransCoreTextureFormat::Float, TexTransCoreTextureChannel::RG) => {
+                naga::StorageFormat::Rg32Float
+            }
+            (TexTransCoreTextureFormat::Float, TexTransCoreTextureChannel::RGBA) => {
+                naga::StorageFormat::Rgba32Float
             }
         }
     }
@@ -285,7 +331,7 @@ impl TexTransCoreEngineContext<'_> {
             self.download_impl(target, &read_back_buffer, download_pixel_par_byte);
         };
 
-        let timer = Instant::now();
+        // let timer = Instant::now();
         let rb_buffer_slice = read_back_buffer.slice(..);
         let (sender, receiver) = tokio::sync::oneshot::channel();
         rb_buffer_slice.map_async(wgpu::MapMode::Read, move |v| {
@@ -298,8 +344,8 @@ impl TexTransCoreEngineContext<'_> {
             .panic_on_timeout();
 
         if receiver.await.unwrap().is_ok() {
-            let end = timer.elapsed();
-            debug_log(&format!("readback-{}ms", end.as_millis()));
+            // let end = timer.elapsed();
+            // debug_log(&format!("readback-{}ms", end.as_millis()));
             Some(read_back_buffer)
         } else {
             None
