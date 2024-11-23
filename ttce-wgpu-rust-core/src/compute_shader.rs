@@ -364,8 +364,6 @@ fn fix_store_value_type(naga_ir: &mut Module) {
                     };
 
                     *value = exp.append(sw, Span::UNDEFINED);
-
-                    println!("{:?}", value);
                 }
                 naga::Statement::Block(block) => fix_block_impl(exp, gv, ty, block),
                 naga::Statement::If {
