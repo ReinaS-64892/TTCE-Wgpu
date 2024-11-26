@@ -17,5 +17,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public IKeyValueStore<string, ITTSamplerKey> SamplerKey => ShaderDictionary.SamplerKey;
 
         public ITexTransComputeKeyDictionary<ITTSamplerKey> ResizingSamplerKey => ShaderDictionary.ResizingSamplerKey;
+
+        public ITexTransComputeKeyDictionary<ITTSamplerKey> TransSamplerKey => ShaderDictionary.TransSamplerKey;
     }
 }

@@ -46,9 +46,11 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                         }
                     case TTComputeType.Sampler:
                         {
-                            var csCode = findTemplate("TextureResizingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
-                            var resizingKey = device.RegisterComputeShaderFromHLSL(path, csCode);
-                            specialShaderDicts[descriptions.ComputeType][computeName] = new SamplerKey(resizingKey);
+                            var csCodeR = findTemplate("TextureResizingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
+                            var csCodeT = findTemplate("TransSamplingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
+                            var resizingKey = device.RegisterComputeShaderFromHLSL(path, csCodeR);
+                            var transSamplerKey = device.RegisterComputeShaderFromHLSL(path, csCodeT);
+                            specialShaderDicts[descriptions.ComputeType][computeName] = new SamplerKey(resizingKey, transSamplerKey);
                             break;
                         }
                 }
@@ -98,8 +100,13 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
             public IKeyValueStore<string, ITTSamplerKey> SamplerKey { get; private set; }
             public ITexTransComputeKeyDictionary<ITTSamplerKey> ResizingSamplerKey { get; private set; }
+            public ITexTransComputeKeyDictionary<ITTSamplerKey> TransSamplerKey { get; private set; }
 
-
+            public ITTComputeKey FillR { get; private set; }
+            public ITTComputeKey FillRG { get; private set; }
+            public ITTComputeKey FillROnly { get; private set; }
+            public ITTComputeKey FillGOnly { get; private set; }
+            public ITTComputeKey TransMapping { get; private set; }
 
             public ShaderDictionary(Dictionary<TTComputeType, Dictionary<string, TTComputeShaderID>> dict, Dictionary<TTComputeType, Dictionary<string, ISpecialComputeKey>> specialDicts)
             {
@@ -114,6 +121,11 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 GammaToLinear = _shaderDict[TTComputeType.General][nameof(GammaToLinear)];
                 LinearToGamma = _shaderDict[TTComputeType.General][nameof(LinearToGamma)];
                 Swizzling = _shaderDict[TTComputeType.General][nameof(Swizzling)];
+                FillR = _shaderDict[TTComputeType.General][nameof(FillR)];
+                FillRG = _shaderDict[TTComputeType.General][nameof(FillRG)];
+                FillROnly = _shaderDict[TTComputeType.General][nameof(FillROnly)];
+                FillGOnly = _shaderDict[TTComputeType.General][nameof(FillGOnly)];
+                TransMapping = _shaderDict[TTComputeType.General][nameof(TransMapping)];
 
                 GenealCompute = new Str2Dict(_shaderDict[TTComputeType.General]);
                 GrabBlend = new Str2Dict(_shaderDict[TTComputeType.GrabBlend]);
@@ -123,7 +135,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
                 SamplerKey = new SamplerKeyQuery(_specialShaderDict[TTComputeType.Sampler]);
                 ResizingSamplerKey = new SamplerToResizeSamplerKey();
-
+                TransSamplerKey = new SamplerToTransSamplerKey();
 
                 DefaultSampler = SamplerKey["AverageSampling"];
             }
@@ -169,6 +181,10 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             {
                 public ITTComputeKey this[ITTSamplerKey key] => ((SamplerKey)key).ResizingComputeKey;
             }
+            class SamplerToTransSamplerKey : ITexTransComputeKeyDictionary<ITTSamplerKey>
+            {
+                public ITTComputeKey this[ITTSamplerKey key] => ((SamplerKey)key).TransSamplerComputeKey;
+            }
         }
 
         class BlendKey : ITTBlendKey, ISpecialComputeKey
@@ -183,9 +199,12 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         class SamplerKey : ITTSamplerKey, ISpecialComputeKey
         {
             public ITTComputeKey ResizingComputeKey;
-            public SamplerKey(ITTComputeKey resizingKey)
+            public ITTComputeKey TransSamplerComputeKey;
+
+            public SamplerKey(ITTComputeKey resizingKey, ITTComputeKey transSamplerKey)
             {
                 ResizingComputeKey = resizingKey;
+                TransSamplerComputeKey = transSamplerKey;
             }
         }
 
