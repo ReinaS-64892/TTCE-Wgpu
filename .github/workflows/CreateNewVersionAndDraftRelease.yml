@@ -1,0 +1,27 @@
+name: Create-NewVersion-And-Draft-Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        required: true
+
+jobs:
+  Call-Update-Version:
+    uses: ./.github/workflows/UpdateVersion.yml
+    with:
+      tag: ${{ github.event.inputs.tag }}
+
+  Call-CreatePackage:
+    needs: [Call-Update-Version]
+    uses: ./.github/workflows/CreatePackage.yml
+    with:
+      ref: ${{ github.event.inputs.tag }}
+
+  Call-ReleaseDraft:
+    needs: [Call-CreatePackage]
+    uses: ./.github/workflows/CreateReleaseDraft.yml
+    with:
+      tag: ${{ github.event.inputs.tag }}
+
