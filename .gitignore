@@ -12,3 +12,5 @@ ProjectPackages
 
 dxcompiler_build/*
 !dxcompiler_build/.gitkeep
+
+ttce-wgpu-rust-core/Cargo.lock
