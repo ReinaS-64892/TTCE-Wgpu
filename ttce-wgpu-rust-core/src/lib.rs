@@ -96,6 +96,11 @@ pub extern "C" fn create_tex_trans_core_engine_device(
             let device_feature = wgpu::DeviceDescriptor {
                 required_features: wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
                     | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM,
+                required_limits: wgpu::Limits {
+                    max_storage_textures_per_shader_stage: 8,
+                    max_bind_groups: 1,
+                    ..Default::default()
+                },
                 ..Default::default()
             };
 

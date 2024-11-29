@@ -259,7 +259,7 @@ impl TexTransCoreEngineContext<'_> {
             panic!("Data Size is Different")
         }
 
-        let data_layout = wgpu::ImageDataLayout {
+        let data_layout = wgpu::TexelCopyBufferLayout {
             offset: 0,
             bytes_per_row: Some(target.width() * pixel_par_byte),
             rows_per_image: None,
@@ -360,15 +360,15 @@ impl TexTransCoreEngineContext<'_> {
     ) {
         let encoder = self.get_command_encoder_as_mut();
         encoder.copy_texture_to_buffer(
-            wgpu::ImageCopyTextureBase {
+            wgpu::TexelCopyTextureInfo {
                 texture: render_texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            wgpu::ImageCopyBufferBase {
+            wgpu::TexelCopyBufferInfo {
                 buffer: read_back_buffer,
-                layout: wgpu::ImageDataLayout {
+                layout: wgpu::TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(render_texture.width() * download_pixel_par_byte),
                     rows_per_image: None,
@@ -377,7 +377,7 @@ impl TexTransCoreEngineContext<'_> {
             wgpu::Extent3d {
                 width: render_texture.width(),
                 height: render_texture.height(),
-                depth_or_array_layers: render_texture.depth_or_array_layers(), //TODO: MipMap の取り扱いを頑張る
+                depth_or_array_layers: render_texture.depth_or_array_layers(),
             },
         );
         self.send_command();
@@ -429,7 +429,7 @@ impl TexTransCoreEngineDevice {
                         label: Some("format convertor compute pipeline"),
                         layout: None,
                         module: &cs_module,
-                        entry_point: "CSMain",
+                        entry_point: Some("CSMain"),
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                         cache: None,
                     });

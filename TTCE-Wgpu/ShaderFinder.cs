@@ -29,13 +29,6 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 {
                     case TTComputeType.General:
                         {
-                            //TODO : issues #5
-                            if (computeName == "TransMapping") { continue; }
-                            if (computeName == "FillR") { continue; }
-                            if (computeName == "FillRG") { continue; }
-                            if (computeName == "FillROnly") { continue; }
-                            if (computeName == "FillGOnly") { continue; }
-
                             shaderDicts[descriptions.ComputeType][computeName] = device.RegisterComputeShaderFromHLSL(path);
                             break;
                         }
@@ -56,8 +49,8 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                             var csCodeR = findTemplate("TextureResizingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
                             var csCodeT = findTemplate("TransSamplingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
                             var resizingKey = device.RegisterComputeShaderFromHLSL(path, csCodeR);
-                            // var transSamplerKey = device.RegisterComputeShaderFromHLSL(path, csCodeT);
-                            specialShaderDicts[descriptions.ComputeType][computeName] = new SamplerKey(resizingKey);
+                            var transSamplerKey = device.RegisterComputeShaderFromHLSL(path, csCodeT);
+                            specialShaderDicts[descriptions.ComputeType][computeName] = new SamplerKey(resizingKey, transSamplerKey);
                             break;
                         }
                 }
@@ -128,11 +121,11 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 GammaToLinear = _shaderDict[TTComputeType.General][nameof(GammaToLinear)];
                 LinearToGamma = _shaderDict[TTComputeType.General][nameof(LinearToGamma)];
                 Swizzling = _shaderDict[TTComputeType.General][nameof(Swizzling)];
-                FillR = null!;// _shaderDict[TTComputeType.General][nameof(FillR)];
-                FillRG = null!;// _shaderDict[TTComputeType.General][nameof(FillRG)];
-                FillROnly = null!;// _shaderDict[TTComputeType.General][nameof(FillROnly)];
-                FillGOnly = null!;// _shaderDict[TTComputeType.General][nameof(FillGOnly)];
-                TransMapping = null!;// _shaderDict[TTComputeType.General][nameof(TransMapping)];
+                FillR = _shaderDict[TTComputeType.General][nameof(FillR)];
+                FillRG = _shaderDict[TTComputeType.General][nameof(FillRG)];
+                FillROnly = _shaderDict[TTComputeType.General][nameof(FillROnly)];
+                FillGOnly = _shaderDict[TTComputeType.General][nameof(FillGOnly)];
+                TransMapping = _shaderDict[TTComputeType.General][nameof(TransMapping)];
 
                 GenealCompute = new Str2Dict(_shaderDict[TTComputeType.General]);
                 GrabBlend = new Str2Dict(_shaderDict[TTComputeType.GrabBlend]);
@@ -142,7 +135,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
                 SamplerKey = new SamplerKeyQuery(_specialShaderDict[TTComputeType.Sampler]);
                 ResizingSamplerKey = new SamplerToResizeSamplerKey();
-                TransSamplerKey = null!;//new SamplerToTransSamplerKey();
+                TransSamplerKey = new SamplerToTransSamplerKey();
 
                 DefaultSampler = SamplerKey["AverageSampling"];
             }
@@ -188,10 +181,10 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             {
                 public ITTComputeKey this[ITTSamplerKey key] => ((SamplerKey)key).ResizingComputeKey;
             }
-            // class SamplerToTransSamplerKey : ITexTransComputeKeyDictionary<ITTSamplerKey>
-            // {
-            //     public ITTComputeKey this[ITTSamplerKey key] => ((SamplerKey)key).TransSamplerComputeKey;
-            // }
+            class SamplerToTransSamplerKey : ITexTransComputeKeyDictionary<ITTSamplerKey>
+            {
+                public ITTComputeKey this[ITTSamplerKey key] => ((SamplerKey)key).TransSamplerComputeKey;
+            }
         }
 
         class BlendKey : ITTBlendKey, ISpecialComputeKey
@@ -206,12 +199,12 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         class SamplerKey : ITTSamplerKey, ISpecialComputeKey
         {
             public ITTComputeKey ResizingComputeKey;
-            // public ITTComputeKey TransSamplerComputeKey;
+            public ITTComputeKey TransSamplerComputeKey;
 
-            public SamplerKey(ITTComputeKey resizingKey)//ITTComputeKey transSamplerKey)
+            public SamplerKey(ITTComputeKey resizingKey, ITTComputeKey transSamplerKey)
             {
                 ResizingComputeKey = resizingKey;
-                // TransSamplerComputeKey = transSamplerKey;
+                TransSamplerComputeKey = transSamplerKey;
             }
         }
 
