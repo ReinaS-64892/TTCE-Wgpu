@@ -109,4 +109,31 @@ public class OperatorTest
             Assert.Equal(color.A, dataSpan[i].A, 1 / 255f);
         }
     }
+
+    [Theory]
+    [ClassData(typeof(TestTTCEWgpuEngineData))]
+    public void ChannelForRGBATest(TestTTCEWgpuEngine device)
+    {
+        using var ctx = device.GetCtx();
+        var rt = ctx.CreateRenderTexture(256, 256, TexTransCoreTextureChannel.RGBA);
+        ctx.ColorFill(rt, new(1, 1, 1, 1));
+    }
+
+    [Theory]
+    [ClassData(typeof(TestTTCEWgpuEngineData))]
+    public void ChannelForRGTest(TestTTCEWgpuEngine device)
+    {
+        using var ctx = device.GetCtx();
+        var rt = ctx.CreateRenderTexture(256, 256, TexTransCoreTextureChannel.RG);
+        ctx.FillRG(rt, new(1, 1));
+    }
+
+    [Theory]
+    [ClassData(typeof(TestTTCEWgpuEngineData))]
+    public void ChannelForRTest(TestTTCEWgpuEngine device)
+    {
+        using var ctx = device.GetCtx();
+        var rt = ctx.CreateRenderTexture(256, 256, TexTransCoreTextureChannel.R);
+        ctx.FillR(rt, 1);
+    }
 }
