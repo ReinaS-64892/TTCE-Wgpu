@@ -55,7 +55,11 @@ impl TexTransCoreEngineDevice {
         let tex_format = match desc.format {
             RequestFormat::AutoWithChannel(tex_trans_core_texture_channel) => {
                 TTRenderTexture::to_wgpu_texture_format(
-                    self.default_render_texture_format,
+                    if tex_trans_core_texture_channel == TexTransCoreTextureChannel::RGBA {
+                        self.default_render_texture_format
+                    } else {
+                        TexTransCoreTextureFormat::Float
+                    },
                     tex_trans_core_texture_channel,
                 )
             }
