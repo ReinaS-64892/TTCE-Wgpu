@@ -278,7 +278,7 @@ pub unsafe extern "C" fn get_height(render_texture_ptr: *mut c_void) -> u32 {
 }
 
 //Upload Download to render texture
-#[derive(Clone, Copy,PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum TexTransCoreTextureChannel {
     R = 1,
