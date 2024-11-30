@@ -5,9 +5,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 
 use naga::TypeInner::Image;
-use naga::{
-    ImageClass, ImageDimension, Module, StorageFormat,
-};
+use naga::{ImageClass, ImageDimension, Module, StorageFormat};
 use wgpu::util::DeviceExt;
 use wgpu::{ComputePipeline, ShaderModule};
 
@@ -206,15 +204,15 @@ impl TTComputeHandler<'_, '_, '_> {
                 entries: &entries,
             });
 
-        let encoder = self.ctx.get_command_encoder_as_mut();
         {
+            let encoder = self.ctx.get_command_encoder_as_mut();
             let mut compute_pass = encoder.begin_compute_pass(&Default::default());
 
             compute_pass.set_pipeline(&self.compute_shader.pipeline);
             compute_pass.set_bind_group(0, &bind_group, &[]);
             compute_pass.dispatch_workgroups(x, y, z);
         }
-        // self.ctx.send_command();
+        self.ctx.check_command_stack();
     }
 }
 

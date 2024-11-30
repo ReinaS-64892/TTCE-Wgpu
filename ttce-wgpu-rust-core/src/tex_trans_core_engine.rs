@@ -15,6 +15,7 @@ pub struct TexTransCoreEngineDevice {
     pub(crate) converter_id: HashMap<ConvertTextureFormat, TTComputeShaderID>,
 
     default_render_texture_format: TexTransCoreTextureFormat,
+    max_command_stack_count: u32,
 }
 
 #[derive(Debug)]
@@ -22,6 +23,7 @@ pub struct TexTransCoreEngineContext<'a> {
     pub(crate) engine: &'a TexTransCoreEngineDevice,
 
     command_encoder: Option<CommandEncoder>,
+    command_stack_count: u32,
 }
 
 impl TexTransCoreEngineDevice {
@@ -34,6 +36,7 @@ impl TexTransCoreEngineDevice {
             converter_id: HashMap::new(),
 
             default_render_texture_format: TexTransCoreTextureFormat::Float,
+            max_command_stack_count: 16,
             // is_linear: false,
         }
     }
@@ -41,6 +44,7 @@ impl TexTransCoreEngineDevice {
         TexTransCoreEngineContext {
             engine: self,
             command_encoder: None,
+            command_stack_count: 0,
         }
     }
 
@@ -118,8 +122,15 @@ impl TexTransCoreEngineContext<'_> {
                     .create_command_encoder(&Default::default()),
             );
         }
+        self.command_stack_count += 1;
 
         self.command_encoder.as_mut().unwrap()
+    }
+
+    pub fn check_command_stack(&mut self) {
+        if self.command_stack_count > self.engine.max_command_stack_count {
+            self.send_command();
+        }
     }
 
     pub fn send_command(&mut self) {
@@ -128,5 +139,6 @@ impl TexTransCoreEngineContext<'_> {
         } else {
             self.engine.queue.submit([]);
         }
+        self.command_stack_count = 0;
     }
 }

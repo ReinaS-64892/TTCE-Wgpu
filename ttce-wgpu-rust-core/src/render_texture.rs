@@ -288,6 +288,7 @@ impl TexTransCoreEngineContext<'_> {
 
             self.convert_to_copy(target, &copy_src);
         }
+        self.send_command();
     }
 
     pub async fn download_texture(
@@ -313,6 +314,8 @@ impl TexTransCoreEngineContext<'_> {
                 .block_copy_size(None)
                 .unwrap()
         };
+        // 個々の手前で command buffer を投げておかないと前回 の send command までのデータしか手に入らない ... なぜ？
+        self.send_command();
 
         let read_back_buffer = self.engine.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("read-back-buffer"),
@@ -330,6 +333,7 @@ impl TexTransCoreEngineContext<'_> {
         } else {
             self.download_impl(target, &read_back_buffer, download_pixel_par_byte);
         };
+        self.send_command();
 
         // let timer = Instant::now();
         let rb_buffer_slice = read_back_buffer.slice(..);
@@ -380,7 +384,6 @@ impl TexTransCoreEngineContext<'_> {
                 depth_or_array_layers: render_texture.depth_or_array_layers(),
             },
         );
-        self.send_command();
     }
 }
 
