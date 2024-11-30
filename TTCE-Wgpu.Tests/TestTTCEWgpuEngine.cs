@@ -11,10 +11,10 @@ public class TestTTCEWgpuEngine : IDisposable
     private readonly ShaderFinder.ShaderDictionary _shaderDict;
     private readonly TTCEWgpuRCDebugPrintToConsole? _debugLogHandler;
 
-    public TestTTCEWgpuEngine(TexTransCoreTextureFormat defaultFormat = TexTransCoreTextureFormat.Byte, bool showDebugLog = false)
+    public TestTTCEWgpuEngine(TexTransCoreTextureFormat defaultFormat = TexTransCoreTextureFormat.Byte, bool showDebugLog = false, TTCEWgpuDevice.RequestDevicePreference requestDevice = TTCEWgpuDevice.RequestDevicePreference.Auto)
     {
         _debugLogHandler = showDebugLog ? new TTCEWgpuRCDebugPrintToConsole() : null;
-        Device = new TTCEWgpuDevice();
+        Device = new TTCEWgpuDevice(requestDevice);
         Device.SetDefaultTextureFormat(defaultFormat);
         _shaderDict = ShaderFinder.RegisterShaders(Device, ShaderFinder.GetAllShaderPathWithCurrentDirectory(), ShaderFinder.CurrentDirectoryFind);
     }
