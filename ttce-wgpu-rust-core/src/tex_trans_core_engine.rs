@@ -153,6 +153,10 @@ pub enum TTCEWgpuError {
     BindingIsNotConstantsBuffer,
     BindingIsNotStorageBuffer,
     BindingIsNotRWTexture,
+
+    MoveFromStorageBufferIsNotFound,
+    FromBindingIsNotStorageBuffer,
+    ToBindingIsNotStorageBuffer,
 }
 impl Display for TTCEWgpuError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

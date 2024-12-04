@@ -209,7 +209,7 @@ impl TTComputeHandler<'_, '_, '_> {
             usage: if is_constants {
                 wgpu::BufferUsages::UNIFORM
             } else {
-                wgpu::BufferUsages::STORAGE
+                wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::MAP_READ
             },
             contents: buffer_data_span,
         };
@@ -274,10 +274,35 @@ impl<'ctx> TexTransCoreEngineContext<'ctx> {
         })
     }
 
-    // pub fn MoveStorageBuffer(&mut self,to_handler:TTComputeHandler,  to_bind_index: u32,from_handler:TTComputeHandler,  from_bind_index: u32)
-    // {
+    pub fn move_storage_buffer(
+        &self,
+        to_handler: &mut TTComputeHandler,
+        to_bind_index: u32,
+        from_handler: &mut TTComputeHandler,
+        from_bind_index: u32,
+    ) -> Result<(), TTCEWgpuError> {
+        if from_handler.compute_shader.binding_type[&from_bind_index]
+            != TTBindingType::StorageBuffer
+        {
+            return Err(TTCEWgpuError::FromBindingIsNotStorageBuffer);
+        }
+        if to_handler.compute_shader.binding_type[&to_bind_index] != TTBindingType::StorageBuffer {
+            return Err(TTCEWgpuError::ToBindingIsNotStorageBuffer);
+        }
+        if !from_handler.bind_buffer.contains_key(&from_bind_index) {
+            return Err(TTCEWgpuError::MoveFromStorageBufferIsNotFound);
+        }
 
-    // }
+        let buffer = from_handler.bind_buffer.remove(&from_bind_index);
+
+        let Some(buffer) = buffer else {
+            return Err(TTCEWgpuError::Unknown);
+        };
+
+        to_handler.bind_buffer.insert(to_bind_index, buffer);
+
+        Ok(())
+    }
 }
 
 fn fix_storage_texture_format(naga_ir: &mut Module, tt_format: TexTransCoreTextureFormat) {

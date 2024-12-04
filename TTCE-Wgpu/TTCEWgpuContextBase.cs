@@ -83,7 +83,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public void DownloadTexture<T>(Span<T> dataDist, TexTransCore.TexTransCoreTextureFormat format, TTRenderTexture source) where T : unmanaged
         {
             if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
-            if(source.GetWidth() < 64 || source.GetHeight() < 64){throw new InvalidOperationException("Texture downloading of 64x64 or above are allowed.");}
+            if (source.GetWidth() < 64 || source.GetHeight() < 64) { throw new InvalidOperationException("Texture downloading of 64x64 or above are allowed."); }
 
             unsafe
             {
@@ -95,6 +95,22 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 {
                     NativeMethod.download_texture((void*)_handler.DangerousGetHandle(), (byte*)ptr, ptrLen, (TexTransCoreTextureFormat)format, (void*)source.GetPtr());
                 }
+            }
+        }
+        public void MoveStorageBuffer(TTComputeHandler toHandler, int toBindIndex, TTComputeHandler fromHandler, int fromBindIndex)
+        {
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
+            if (toHandler._handler is null) { throw new ObjectDisposedException("to Handler is dropped"); }
+            if (fromHandler._handler is null) { throw new ObjectDisposedException("from Handler is dropped"); }
+
+            bool result;
+            unsafe
+            {
+                result = NativeMethod.move_storage_buffer((void*)_handler.DangerousGetHandle(), (void*)toHandler._handler.DangerousGetHandle(), (uint)toBindIndex, (void*)fromHandler._handler.DangerousGetHandle(), (uint)fromBindIndex);
+            }
+            if (result is false)
+            {
+                throw new TTCEWgpuNativeError("Buffer upload failed! please see log!");
             }
         }
         public ITTRenderTexture CreateRenderTexture(int width, int height, TexTransCore.TexTransCoreTextureChannel channel = TexTransCore.TexTransCoreTextureChannel.RGBA)

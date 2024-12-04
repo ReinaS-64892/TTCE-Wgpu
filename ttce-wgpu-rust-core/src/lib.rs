@@ -511,6 +511,43 @@ pub unsafe extern "C" fn upload_storage_buffer(
     result.is_ok()
 }
 
+/// # Safety
+/// ttce_context_ptr は TexTransCoreEngineContext のポインターでないといけない。
+/// *_tt_compute_handler_ptr は TTComputeHandler のポインター、それぞれいれるように、書き換えもするから気を付けようね！
+/// *_bind_index は get_bind_index から得た値を使うように。
+#[no_mangle]
+pub unsafe extern "C" fn move_storage_buffer(
+    ttce_context_ptr: *mut c_void,
+    to_tt_compute_handler_ptr: *mut c_void,
+    to_bind_index: u32,
+    from_tt_compute_handler_ptr: *mut c_void,
+    from_bind_index: u32,
+) -> bool {
+    let engine_ctx = (ttce_context_ptr as *mut TexTransCoreEngineContext)
+        .as_mut()
+        .unwrap();
+    let to_compute_handler = (to_tt_compute_handler_ptr as *mut TTComputeHandler)
+        .as_mut()
+        .unwrap();
+
+    let from_compute_handler = (from_tt_compute_handler_ptr as *mut TTComputeHandler)
+        .as_mut()
+        .unwrap();
+
+    let result = engine_ctx.move_storage_buffer(
+        to_compute_handler,
+        to_bind_index,
+        from_compute_handler,
+        from_bind_index,
+    );
+
+    if let Err(e) = result {
+        debug_log(format!("{:?}", e).as_str());
+    }
+
+    result.is_ok()
+}
+
 #[repr(C)]
 pub struct WorkGroupSize {
     pub x: u32,
