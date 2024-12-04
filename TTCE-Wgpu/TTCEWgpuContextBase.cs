@@ -12,6 +12,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
     , ITexTransCopyRenderTexture
     , ITexTransGetComputeHandler
     , ITexTransRenderTextureIO
+    , ITexTransDrivingComputeStorageBuffer
     {
         TTCEWgpuDevice _device = null!;
         TexTransCoreEngineContextHandler? _handler = null;
@@ -135,6 +136,12 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         {
             DownloadTexture(dataDist, format, (TTRenderTexture)renderTexture);
         }
+        public void MoveStorageBuffer(ITTComputeHandler toHandler, int toID, ITTComputeHandler fromHandler, int fromID)
+        {
+            var toWgpuComputeHandler = (TTComputeHandler)toHandler;
+            var fromWgpuComputeHandler = (TTComputeHandler)fromHandler;
+            MoveStorageBuffer(toWgpuComputeHandler, toID, fromWgpuComputeHandler, fromID);
+        }
 
 
         protected virtual void Dispose(bool disposing)
@@ -156,6 +163,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
     }
 
     internal static class TTCEWgpuEngineUtil

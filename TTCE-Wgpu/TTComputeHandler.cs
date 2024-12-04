@@ -54,7 +54,6 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         { UploadBufferImpl(nameID, buffer, false); }
         private void UploadBufferImpl<T>(int nameID, ReadOnlySpan<T> buffer, bool isConstants) where T : unmanaged
         {
-
             if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
 
             bool result;
@@ -65,6 +64,20 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                     if (isConstants) result = NativeMethod.upload_constants_buffer((void*)_handler.DangerousGetHandle(), (uint)nameID, (byte*)bufferPtr, buffer.Length * sizeof(T));
                     else result = NativeMethod.upload_storage_buffer((void*)_handler.DangerousGetHandle(), (uint)nameID, (byte*)bufferPtr, buffer.Length * sizeof(T));
                 }
+            }
+            if (result is false)
+            {
+                throw new TTCEWgpuNativeError("Buffer upload failed! please see log!");
+            }
+        }
+        public void AllocateStorageBuffer(int nameID, int bufferLen)
+        {
+            if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
+
+            bool result;
+            unsafe
+            {
+                result = NativeMethod.allocate_storage_buffer((void*)_handler.DangerousGetHandle(), (uint)nameID, bufferLen);
             }
             if (result is false)
             {

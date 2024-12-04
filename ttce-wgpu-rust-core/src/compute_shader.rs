@@ -209,7 +209,7 @@ impl TTComputeHandler<'_, '_, '_> {
             usage: if is_constants {
                 wgpu::BufferUsages::UNIFORM
             } else {
-                wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::MAP_READ
+                wgpu::BufferUsages::STORAGE
             },
             contents: buffer_data_span,
         };
@@ -219,6 +219,31 @@ impl TTComputeHandler<'_, '_, '_> {
         Ok(())
     }
 
+    pub fn allocate_storage_buffer(
+        &mut self,
+        bind_index: u32,
+        buffer_len: i32,
+    ) -> Result<(), TTCEWgpuError> {
+        let Some(bind_type) = self.compute_shader.binding_type.get(&bind_index) else {
+            return Err(TTCEWgpuError::BindingNotFound);
+        };
+        if *bind_type != TTBindingType::StorageBuffer {
+            return Err(TTCEWgpuError::BindingIsNotStorageBuffer);
+        };
+        let label = format!("{}-storage buffer with", bind_index);
+        let alined_len = ((buffer_len + 4) & !3).max(4) as u64;
+        let buffer_desc = wgpu::BufferDescriptor {
+            label: Some(label.as_str()),
+            usage: wgpu::BufferUsages::STORAGE,
+            size: alined_len,
+            mapped_at_creation: false,
+        };
+
+        let buffer = self.ctx.engine.device.create_buffer(&buffer_desc);
+        self.bind_buffer.insert(bind_index, buffer);
+
+        Ok(())
+    }
     pub fn get_work_group_size(&self) -> WorkGroupSize {
         self.compute_shader.work_group_size
     }

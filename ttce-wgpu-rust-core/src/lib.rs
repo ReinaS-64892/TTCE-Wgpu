@@ -512,6 +512,28 @@ pub unsafe extern "C" fn upload_storage_buffer(
 }
 
 /// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインターを
+/// bind_index は get_bind_index から得た値を使うように。
+#[no_mangle]
+pub unsafe extern "C" fn allocate_storage_buffer(
+    tt_compute_handler_ptr: *mut c_void,
+    bind_index: u32,
+    buffer_len: i32,
+) -> bool {
+    let compute_handler = (tt_compute_handler_ptr as *mut TTComputeHandler)
+        .as_mut()
+        .unwrap();
+
+    let result = compute_handler.allocate_storage_buffer(bind_index,  buffer_len);
+
+    if let Err(e) = result {
+        debug_log(format!("{:?}", e).as_str());
+    }
+
+    result.is_ok()
+}
+
+/// # Safety
 /// ttce_context_ptr は TexTransCoreEngineContext のポインターでないといけない。
 /// *_tt_compute_handler_ptr は TTComputeHandler のポインター、それぞれいれるように、書き換えもするから気を付けようね！
 /// *_bind_index は get_bind_index から得た値を使うように。
