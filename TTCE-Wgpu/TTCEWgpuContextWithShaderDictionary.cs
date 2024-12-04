@@ -7,6 +7,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
     {
         public ShaderFinder.ShaderDictionary ShaderDictionary = null!;//気を付けるようにね！
         public ITexTransStandardComputeKey StandardComputeKey => ShaderDictionary;
+        public ITexTransTransTextureComputeKey TransTextureComputeKey => ShaderDictionary;
 
         public ITexTransComputeKeyDictionary<string> GrabBlend => ShaderDictionary.GrabBlend;
 
@@ -19,5 +20,6 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public ITexTransComputeKeyDictionary<ITTSamplerKey> ResizingSamplerKey => ShaderDictionary.ResizingSamplerKey;
 
         public ITexTransComputeKeyDictionary<ITTSamplerKey> TransSamplerKey => ShaderDictionary.TransSamplerKey;
+
     }
 }

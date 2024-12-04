@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using net.rs64.TexTransCore;
 namespace net.rs64.TexTransCoreEngineForWgpu
 {
@@ -36,9 +37,14 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         {
             if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
 
+            bool result;
             unsafe
             {
-                NativeMethod.set_render_texture((void*)_handler.DangerousGetHandle(), (uint)nameID, (void*)renderTexture.GetPtr());
+                result = NativeMethod.set_render_texture((void*)_handler.DangerousGetHandle(), (uint)nameID, (void*)renderTexture.GetPtr());
+            }
+            if (result is false)
+            {
+                throw new TTCEWgpuNativeError("Buffer upload failed! please see log!");
             }
         }
 
@@ -51,13 +57,18 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
             if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
 
+            bool result;
             unsafe
             {
                 fixed (T* bufferPtr = buffer)
                 {
-                    if (isConstants) NativeMethod.upload_constants_buffer((void*)_handler.DangerousGetHandle(), (uint)nameID, (byte*)bufferPtr, buffer.Length * sizeof(T));
-                    else NativeMethod.upload_storage_buffer((void*)_handler.DangerousGetHandle(), (uint)nameID, (byte*)bufferPtr, buffer.Length * sizeof(T));
+                    if (isConstants) result = NativeMethod.upload_constants_buffer((void*)_handler.DangerousGetHandle(), (uint)nameID, (byte*)bufferPtr, buffer.Length * sizeof(T));
+                    else result = NativeMethod.upload_storage_buffer((void*)_handler.DangerousGetHandle(), (uint)nameID, (byte*)bufferPtr, buffer.Length * sizeof(T));
                 }
+            }
+            if (result is false)
+            {
+                throw new TTCEWgpuNativeError("Buffer upload failed! please see log!");
             }
         }
 

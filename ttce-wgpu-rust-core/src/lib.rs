@@ -435,7 +435,6 @@ pub struct GetBindIndexResult {
     result: bool,
     bind_index: u32,
 }
-
 /// # Safety
 /// tt_compute_handler_ptr は TTComputeHandler のポインター、render_texture_ptr は TTRenderTexture のポインターでないといけない。
 /// bind_index は get_bind_index から得た値を使うように。
@@ -444,7 +443,7 @@ pub unsafe extern "C" fn set_render_texture(
     tt_compute_handler_ptr: *mut c_void,
     bind_index: u32,
     render_texture_ptr: *const c_void,
-) {
+) -> bool {
     let compute_handler = (tt_compute_handler_ptr as *mut TTComputeHandler)
         .as_mut()
         .unwrap();
@@ -453,7 +452,13 @@ pub unsafe extern "C" fn set_render_texture(
         .as_ref()
         .unwrap();
 
-    compute_handler.set_render_texture(bind_index, render_texture);
+    let result = compute_handler.set_render_texture(bind_index, render_texture);
+
+    if let Err(e) = result {
+        debug_log(format!("{:?}", e).as_str());
+    }
+
+    result.is_ok()
 }
 
 /// # Safety
@@ -465,14 +470,20 @@ pub unsafe extern "C" fn upload_constants_buffer(
     bind_index: u32,
     buffer: *const u8,
     buffer_len: i32,
-) {
+) -> bool {
     let compute_handler = (tt_compute_handler_ptr as *mut TTComputeHandler)
         .as_mut()
         .unwrap();
 
     let buffer = std::slice::from_raw_parts(buffer, buffer_len as usize);
 
-    compute_handler.upload_buffer(bind_index, buffer, true);
+    let result = compute_handler.upload_buffer(bind_index, buffer, true);
+
+    if let Err(e) = result {
+        debug_log(format!("{:?}", e).as_str());
+    }
+
+    result.is_ok()
 }
 
 /// # Safety
@@ -484,14 +495,20 @@ pub unsafe extern "C" fn upload_storage_buffer(
     bind_index: u32,
     buffer: *const u8,
     buffer_len: i32,
-) {
+) -> bool {
     let compute_handler = (tt_compute_handler_ptr as *mut TTComputeHandler)
         .as_mut()
         .unwrap();
 
     let buffer = std::slice::from_raw_parts(buffer, buffer_len as usize);
 
-    compute_handler.upload_buffer(bind_index, buffer, false);
+    let result = compute_handler.upload_buffer(bind_index, buffer, false);
+
+    if let Err(e) = result {
+        debug_log(format!("{:?}", e).as_str());
+    }
+
+    result.is_ok()
 }
 
 #[repr(C)]

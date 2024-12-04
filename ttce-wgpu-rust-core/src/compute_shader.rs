@@ -10,7 +10,9 @@ use wgpu::util::DeviceExt;
 use wgpu::{ComputePipeline, ShaderModule};
 
 use crate::render_texture::TTRenderTexture;
-use crate::tex_trans_core_engine::{TexTransCoreEngineContext, TexTransCoreEngineDevice};
+use crate::tex_trans_core_engine::{
+    TTCEWgpuError, TexTransCoreEngineContext, TexTransCoreEngineDevice,
+};
 use crate::{debug_log, TexTransCoreTextureFormat};
 
 #[derive(Debug)]
@@ -20,6 +22,7 @@ pub struct TTComputeShader {
 
     pub(crate) pipeline: ComputePipeline,
     pub(crate) binding_map: HashMap<String, u32>,
+    pub(crate) binding_type: HashMap<u32, TTBindingType>,
     pub(crate) work_group_size: WorkGroupSize,
 }
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Default)]
@@ -78,7 +81,8 @@ impl TexTransCoreEngineDevice {
         clamp_work_group_size(&mut naga_ir);
 
         let wg_size = get_work_group_size(&naga_ir);
-        let bind_map = HashMap::<String, u32>::from_iter(get_bindings(&naga_ir));
+        let bind_map = HashMap::from_iter(get_bindings(&naga_ir));
+        let bind_type = HashMap::from_iter(get_binding_types(&naga_ir));
 
         // let mut validator = naga::valid::Validator::new(
         //     naga::valid::ValidationFlags::empty(),
@@ -121,6 +125,7 @@ impl TexTransCoreEngineDevice {
             module: cs_module,
             pipeline: compute_pipeline,
             binding_map: bind_map,
+            binding_type: bind_type,
             work_group_size: wg_size,
         });
 
@@ -146,15 +151,49 @@ impl TTComputeHandler<'_, '_, '_> {
         self.compute_shader.binding_map.get(name).copied()
     }
 
-    pub fn set_render_texture(&mut self, bind_index: u32, render_texture: &TTRenderTexture) {
+    pub fn set_render_texture(
+        &mut self,
+        bind_index: u32,
+        render_texture: &TTRenderTexture,
+    ) -> Result<(), TTCEWgpuError> {
+        let Some(bind_type) = self.compute_shader.binding_type.get(&bind_index) else {
+            return Err(TTCEWgpuError::BindingNotFound);
+        };
+        if *bind_type != TTBindingType::RWRenderTexture {
+            return Err(TTCEWgpuError::BindingIsNotRWTexture);
+        }
+
         let tex_view = render_texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
         self.bind_tex_view.insert(bind_index, tex_view);
+        Ok(())
     }
 
-    pub fn upload_buffer(&mut self, bind_index: u32, buffer_data_span: &[u8], is_constants: bool) {
+    pub fn upload_buffer(
+        &mut self,
+        bind_index: u32,
+        buffer_data_span: &[u8],
+        is_constants: bool,
+    ) -> Result<(), TTCEWgpuError> {
+        let data_type = if is_constants {
+            TTBindingType::ConstantsBuffer
+        } else {
+            TTBindingType::StorageBuffer
+        };
+
+        let Some(bind_type) = self.compute_shader.binding_type.get(&bind_index) else {
+            return Err(TTCEWgpuError::BindingNotFound);
+        };
+        if *bind_type != data_type {
+            return if data_type != TTBindingType::ConstantsBuffer {
+                Err(TTCEWgpuError::BindingIsNotConstantsBuffer)
+            } else {
+                Err(TTCEWgpuError::BindingIsNotStorageBuffer)
+            };
+        }
+
         if self.bind_buffer.contains_key(&bind_index) {
             //前のバッファーにもう一度詰めて送る方法わかんなかったから破棄
             let _ = self.bind_buffer.remove(&bind_index).unwrap();
@@ -176,6 +215,8 @@ impl TTComputeHandler<'_, '_, '_> {
         };
         let buffer = self.ctx.engine.device.create_buffer_init(&buffer_desc);
         self.bind_buffer.insert(bind_index, buffer);
+
+        Ok(())
     }
 
     pub fn get_work_group_size(&self) -> WorkGroupSize {
@@ -232,6 +273,11 @@ impl<'ctx> TexTransCoreEngineContext<'ctx> {
             bind_buffer: HashMap::new(),
         })
     }
+
+    // pub fn MoveStorageBuffer(&mut self,to_handler:TTComputeHandler,  to_bind_index: u32,from_handler:TTComputeHandler,  from_bind_index: u32)
+    // {
+
+    // }
 }
 
 fn fix_storage_texture_format(naga_ir: &mut Module, tt_format: TexTransCoreTextureFormat) {
@@ -286,7 +332,7 @@ fn fix_storage_texture_format(naga_ir: &mut Module, tt_format: TexTransCoreTextu
 }
 
 fn get_bindings(naga_ir: &Module) -> Vec<(String, u32)> {
-    let bindings: Vec<_> = naga_ir
+    naga_ir
         .global_variables
         .iter()
         .filter_map(|gv_h| {
@@ -302,13 +348,45 @@ fn get_bindings(naga_ir: &Module) -> Vec<(String, u32)> {
 
             Some((
                 String::from(gv.name.as_ref().unwrap().as_str()),
-                // group: gv.binding.as_ref().unwrap().group,
                 gv.binding.as_ref().unwrap().binding,
-                // variable_type: naga_il.types[gv.ty].clone(),
             ))
         })
-        .collect();
-    bindings
+        .collect()
+}
+fn get_binding_types(naga_ir: &Module) -> Vec<(u32, TTBindingType)> {
+    naga_ir
+        .global_variables
+        .iter()
+        .filter_map(|gv_h| {
+            let gv = gv_h.1;
+
+            if gv.name.is_none() || gv.binding.is_none() {
+                return None;
+            }
+            if gv.binding.as_ref()?.group != 0 {
+                debug_log("not supported binding group is not 0");
+                return None;
+            }
+
+            let bind_type = match naga_ir.types[gv.ty].inner {
+                naga::TypeInner::Struct { .. } => match gv.space {
+                    naga::AddressSpace::Uniform { .. } => Some(TTBindingType::ConstantsBuffer),
+                    naga::AddressSpace::Storage { .. } => Some(TTBindingType::StorageBuffer),
+                    _ => None,
+                },
+                naga::TypeInner::Image { .. } => Some(TTBindingType::RWRenderTexture),
+                _ => None,
+            }?;
+
+            Some((gv.binding.as_ref().unwrap().binding, bind_type))
+        })
+        .collect()
+}
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum TTBindingType {
+    ConstantsBuffer,
+    StorageBuffer,
+    RWRenderTexture,
 }
 
 fn get_work_group_size(naga_ir: &Module) -> WorkGroupSize {

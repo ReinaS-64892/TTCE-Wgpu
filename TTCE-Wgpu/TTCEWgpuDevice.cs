@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using net.rs64.TexTransCore;
 namespace net.rs64.TexTransCoreEngineForWgpu
 {
@@ -191,4 +192,28 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             return "TTComputeShaderID:" + _id;
         }
     }
+
+
+
+
+    [Serializable]
+    internal class TTCEWgpuNativeError : Exception
+    {
+        public TTCEWgpuNativeError()
+        {
+        }
+
+        public TTCEWgpuNativeError(string message) : base(message)
+        {
+        }
+
+        public TTCEWgpuNativeError(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        protected TTCEWgpuNativeError(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+        }
+    }
+
 }

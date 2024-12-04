@@ -72,7 +72,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             var candidates = Directory.GetFiles(rootPath, fileName, SearchOption.AllDirectories);
             return File.ReadAllText(candidates.First(s => s.Contains("TexTransCore")));
         }
-        public class ShaderDictionary : ITexTransStandardComputeKey
+        public class ShaderDictionary : ITexTransStandardComputeKey, ITexTransTransTextureComputeKey
         {
             private Dictionary<TTComputeType, Dictionary<string, TTComputeShaderID>> _shaderDict;
             private Dictionary<TTComputeType, Dictionary<string, ISpecialComputeKey>> _specialShaderDict;
@@ -106,7 +106,11 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             public ITTComputeKey FillRG { get; private set; }
             public ITTComputeKey FillROnly { get; private set; }
             public ITTComputeKey FillGOnly { get; private set; }
+
             public ITTComputeKey TransMapping { get; private set; }
+
+            public ITTComputeKey TransWarpNone { get; private set; }
+            public ITTComputeKey TransWarpStretch { get; private set; }
 
             public ShaderDictionary(Dictionary<TTComputeType, Dictionary<string, TTComputeShaderID>> dict, Dictionary<TTComputeType, Dictionary<string, ISpecialComputeKey>> specialDicts)
             {
@@ -125,7 +129,10 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 FillRG = _shaderDict[TTComputeType.General][nameof(FillRG)];
                 FillROnly = _shaderDict[TTComputeType.General][nameof(FillROnly)];
                 FillGOnly = _shaderDict[TTComputeType.General][nameof(FillGOnly)];
+
                 TransMapping = _shaderDict[TTComputeType.General][nameof(TransMapping)];
+                TransWarpNone = _shaderDict[TTComputeType.General][nameof(TransWarpNone)];
+                TransWarpStretch = _shaderDict[TTComputeType.General][nameof(TransWarpStretch)];
 
                 GenealCompute = new Str2Dict(_shaderDict[TTComputeType.General]);
                 GrabBlend = new Str2Dict(_shaderDict[TTComputeType.GrabBlend]);

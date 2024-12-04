@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::error::Error;
+use std::fmt::Display;
 
 use wgpu::CommandEncoder;
 
@@ -142,3 +144,19 @@ impl TexTransCoreEngineContext<'_> {
         self.command_stack_count = 0;
     }
 }
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum TTCEWgpuError {
+    #[allow(dead_code)]
+    Unknown,
+
+    BindingNotFound,
+    BindingIsNotConstantsBuffer,
+    BindingIsNotStorageBuffer,
+    BindingIsNotRWTexture,
+}
+impl Display for TTCEWgpuError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{:?}", self))
+    }
+}
+impl Error for TTCEWgpuError {}

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ops::Deref};
 
 use crate::{
-    compute_shader::{AsTypeStr, TTComputeShader, TTComputeShaderID, WorkGroupSize},
+    compute_shader::{AsTypeStr, TTBindingType, TTComputeShader, TTComputeShaderID, WorkGroupSize},
     tex_trans_core_engine::{
         RequestFormat, TTRtRequestDescriptor, TexTransCoreEngineContext, TexTransCoreEngineDevice,
     },
@@ -229,9 +229,9 @@ impl TexTransCoreEngineContext<'_> {
         let mut converter_handler = self.get_compute_handler(converter_id).unwrap();
 
         let src_index = converter_handler.get_bind_index("SrcTex").unwrap();
-        converter_handler.set_render_texture(src_index, src);
+        converter_handler.set_render_texture(src_index, src).unwrap();
         let dist_index = converter_handler.get_bind_index("DistTex").unwrap();
-        converter_handler.set_render_texture(dist_index, dist);
+        converter_handler.set_render_texture(dist_index, dist).unwrap();
 
         let wg_size = converter_handler.get_work_group_size();
         converter_handler.dispatch(
@@ -412,6 +412,9 @@ impl TexTransCoreEngineDevice {
         let mut bind_map = HashMap::new();
         bind_map.insert("SrcTex".to_string(), 0_u32);
         bind_map.insert("DistTex".to_string(), 1_u32);
+        let mut bind_type = HashMap::new();
+        bind_type.insert(0_u32, TTBindingType::RWRenderTexture);
+        bind_type.insert(1_u32, TTBindingType::RWRenderTexture);
 
         for cv in FORMAT_TABLE {
             let from_format = cv.from;
@@ -444,6 +447,7 @@ impl TexTransCoreEngineDevice {
                 module: cs_module,
                 pipeline: compute_pipeline,
                 binding_map: bind_map.clone(),
+                binding_type: bind_type.clone(),
                 work_group_size: WorkGroupSize { x: 16, y: 16, z: 1 },
             });
 
