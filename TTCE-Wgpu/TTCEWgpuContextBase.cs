@@ -12,7 +12,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
     , ITexTransCopyRenderTexture
     , ITexTransGetComputeHandler
     , ITexTransRenderTextureIO
-    , ITexTransDrivingComputeStorageBuffer
+    , ITexTransDriveStorageBufferHolder
     {
         TTCEWgpuDevice _device = null!;
         TexTransCoreEngineContextHandler? _handler = null;
@@ -21,6 +21,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         internal HashSet<TTRenderTexture> _renderTextures = new();
         internal HashSet<TTComputeHandler> _computeHandlers = new();
+        internal HashSet<TTStorageBuffer> _storageBuffers = new();
 
 
         internal void NativeInitialize(TTCEWgpuDevice device, TexTransCoreEngineContextHandler handler)
@@ -98,22 +99,53 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 }
             }
         }
-        public void MoveStorageBuffer(TTComputeHandler toHandler, int toBindIndex, TTComputeHandler fromHandler, int fromBindIndex)
+        public TTStorageBuffer AllocateStorageBuffer(int length, bool downloadable = false)
         {
             if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
-            if (toHandler._handler is null) { throw new ObjectDisposedException("to Handler is dropped"); }
-            if (fromHandler._handler is null) { throw new ObjectDisposedException("from Handler is dropped"); }
 
-            bool result;
             unsafe
             {
-                result = NativeMethod.move_storage_buffer((void*)_handler.DangerousGetHandle(), (void*)toHandler._handler.DangerousGetHandle(), (uint)toBindIndex, (void*)fromHandler._handler.DangerousGetHandle(), (uint)fromBindIndex);
-            }
-            if (result is false)
-            {
-                throw new TTCEWgpuNativeError("Buffer upload failed! please see log!");
+                var storageBufferPtr = new IntPtr(NativeMethod.allocate_storage_buffer((void*)_handler.DangerousGetHandle(), length, downloadable));
+                var sb = new TTStorageBuffer(this, new TTStorageBufferHandler(storageBufferPtr), downloadable);
+                _storageBuffers.Add(sb);
+                return sb;
             }
         }
+
+        public TTStorageBuffer UploadStorageBuffer<T>(Span<T> data, bool downloadable = false) where T : unmanaged
+        {
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
+
+            unsafe
+            {
+                var dataLen = data.Length * sizeof(T);
+                fixed (T* dataPtr = data)
+                {
+
+                    var storageBufferPtr = new IntPtr(NativeMethod.upload_storage_buffer((void*)_handler.DangerousGetHandle(), (byte*)dataPtr, dataLen, downloadable));
+                    var sb = new TTStorageBuffer(this, new TTStorageBufferHandler(storageBufferPtr), downloadable);
+                    _storageBuffers.Add(sb);
+                    return sb;
+                }
+            }
+        }
+
+        public void DownloadBuffer<T>(Span<T> dist, TTStorageBuffer buffer) where T : unmanaged
+        {
+            if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
+            if (buffer._downloadable is false) { throw new InvalidOperationException("This Storage buffer is not downloadable"); }
+            unsafe
+            {
+                var dataLen = dist.Length * sizeof(T);
+                using (buffer)
+                    fixed (T* bufPtr = dist)
+                    {
+                        NativeMethod.download_storage_buffer((void*)_handler.DangerousGetHandle(), (byte*)bufPtr, dataLen, (void*)buffer.GetPtr());
+                    }
+            }
+        }
+
+
         public ITTRenderTexture CreateRenderTexture(int width, int height, TexTransCore.TexTransCoreTextureChannel channel = TexTransCore.TexTransCoreTextureChannel.RGBA)
         {
             return GetRenderTexture((uint)width, (uint)height, channel);
@@ -136,13 +168,12 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         {
             DownloadTexture(dataDist, format, (TTRenderTexture)renderTexture);
         }
-        public void MoveStorageBuffer(ITTComputeHandler toHandler, int toID, ITTComputeHandler fromHandler, int fromID)
-        {
-            var toWgpuComputeHandler = (TTComputeHandler)toHandler;
-            var fromWgpuComputeHandler = (TTComputeHandler)fromHandler;
-            MoveStorageBuffer(toWgpuComputeHandler, toID, fromWgpuComputeHandler, fromID);
-        }
-
+        ITTStorageBuffer ITexTransDriveStorageBufferHolder.AllocateStorageBuffer(int length, bool downloadable)
+        { return AllocateStorageBuffer(length, downloadable); }
+        ITTStorageBuffer ITexTransDriveStorageBufferHolder.UploadStorageBuffer<T>(Span<T> data, bool downloadable)
+        { return UploadStorageBuffer(data, downloadable); }
+        public void DownloadBuffer<T>(Span<T> dist, ITTStorageBuffer takeToFrom) where T : unmanaged
+        { DownloadBuffer(dist, (TTStorageBuffer)takeToFrom); }
 
         protected virtual void Dispose(bool disposing)
         {

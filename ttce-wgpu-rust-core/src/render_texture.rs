@@ -2,6 +2,7 @@ use std::{collections::HashMap, ops::Deref};
 
 use crate::{
     compute_shader::{AsTypeStr, TTBindingType, TTComputeShader, TTComputeShaderID, WorkGroupSize},
+    storage_buffer::TTStorageBuffer,
     tex_trans_core_engine::{
         RequestFormat, TTRtRequestDescriptor, TexTransCoreEngineContext, TexTransCoreEngineDevice,
     },
@@ -229,9 +230,13 @@ impl TexTransCoreEngineContext<'_> {
         let mut converter_handler = self.get_compute_handler(converter_id).unwrap();
 
         let src_index = converter_handler.get_bind_index("SrcTex").unwrap();
-        converter_handler.set_render_texture(src_index, src).unwrap();
+        converter_handler
+            .set_render_texture(src_index, src)
+            .unwrap();
         let dist_index = converter_handler.get_bind_index("DistTex").unwrap();
-        converter_handler.set_render_texture(dist_index, dist).unwrap();
+        converter_handler
+            .set_render_texture(dist_index, dist)
+            .unwrap();
 
         let wg_size = converter_handler.get_work_group_size();
         converter_handler.dispatch(

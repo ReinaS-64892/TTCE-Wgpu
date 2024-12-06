@@ -1,5 +1,6 @@
 mod compute_shader;
 mod render_texture;
+mod storage_buffer;
 mod tex_trans_core_engine;
 
 use std::{ffi::c_void, ops::Deref, sync::Mutex};
@@ -7,6 +8,7 @@ use std::{ffi::c_void, ops::Deref, sync::Mutex};
 use compute_shader::{TTComputeHandler, TTComputeShaderID};
 use once_cell::sync::OnceCell;
 use render_texture::TTRenderTexture;
+use storage_buffer::TTStorageBuffer;
 use tex_trans_core_engine::{TexTransCoreEngineContext, TexTransCoreEngineDevice};
 use wgpu::{Backends, DeviceType};
 
@@ -96,7 +98,7 @@ pub extern "C" fn create_tex_trans_core_engine_device(
             let device_feature = wgpu::DeviceDescriptor {
                 required_features: wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
                     | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM,
-                required_limits: wgpu::Limits {
+                    required_limits: wgpu::Limits {
                     max_storage_textures_per_shader_stage: 8,
                     max_bind_groups: 1,
                     ..Default::default()
@@ -375,6 +377,80 @@ pub unsafe extern "C" fn download_texture(
     });
 }
 
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインターを割り当てるように。
+/// TTStorageBuffer への pointer が得られる。
+#[no_mangle]
+pub unsafe extern "C" fn allocate_storage_buffer(
+    ttce_context_ptr: *const c_void,
+    buffer_len: i32,
+    downloadable: bool,
+) -> *mut c_void {
+    let engine_ctx = (ttce_context_ptr as *const TexTransCoreEngineContext)
+        .as_ref()
+        .unwrap();
+
+    Box::into_raw(Box::from(
+        engine_ctx.allocate_storage_buffer(buffer_len, downloadable),
+    )) as *mut c_void
+}
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインター、 buffer は アップロードしたい 配列の先頭の のポインターでないといけない。
+/// TTStorageBuffer への pointer が得られる。
+#[no_mangle]
+pub unsafe extern "C" fn upload_storage_buffer(
+    ttce_context_ptr: *const c_void,
+    buffer: *const u8,
+    buffer_len: i32,
+    downloadable: bool,
+) -> *mut c_void {
+    let engine_ctx = (ttce_context_ptr as *const TexTransCoreEngineContext)
+        .as_ref()
+        .unwrap();
+
+    let buffer = std::slice::from_raw_parts(buffer, buffer_len as usize);
+
+    Box::into_raw(Box::from(
+        engine_ctx.upload_storage_buffer(buffer, downloadable),
+    )) as *mut c_void
+}
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインターでないといけない。
+#[no_mangle]
+pub unsafe extern "C" fn drop_storage_buffer(storage_buffer_ptr: *mut c_void) {
+    let _ = Box::from_raw(storage_buffer_ptr as *mut TTStorageBuffer);
+}
+
+/// # Safety
+/// tt_compute_handler_ptr は TTComputeHandler のポインターでないといけない。
+#[no_mangle]
+pub unsafe extern "C" fn download_storage_buffer(
+    ttce_context_ptr: *mut c_void,
+    buffer: *mut u8,
+    buffer_len: i32,
+    storage_buffer_ptr: *const c_void,
+) {
+    let engine_ctx = (ttce_context_ptr as *mut TexTransCoreEngineContext)
+        .as_mut()
+        .unwrap();
+    let storage_buffer = (storage_buffer_ptr as *mut TTStorageBuffer)
+        .as_ref()
+        .unwrap();
+
+    let buffer = std::slice::from_raw_parts_mut(buffer, buffer_len as usize);
+
+    get_tokio_runtime()
+        .block_on(engine_ctx.download_storage_buffer(storage_buffer))
+        .unwrap();
+
+    let storage_buffer_slice = storage_buffer
+        .buffer
+        .slice(..storage_buffer.buffer.size().min(buffer_len as u64));
+    let storage_buffer_mapped = storage_buffer_slice.get_mapped_range();
+
+    buffer.copy_from_slice(&storage_buffer_mapped);
+}
+
 // TTComputeHandler
 
 /// # Safety
@@ -477,7 +553,7 @@ pub unsafe extern "C" fn upload_constants_buffer(
 
     let buffer = std::slice::from_raw_parts(buffer, buffer_len as usize);
 
-    let result = compute_handler.upload_buffer(bind_index, buffer, true);
+    let result = compute_handler.upload_constants_buffer(bind_index, buffer);
 
     if let Err(e) = result {
         debug_log(format!("{:?}", e).as_str());
@@ -490,78 +566,20 @@ pub unsafe extern "C" fn upload_constants_buffer(
 /// tt_compute_handler_ptr は TTComputeHandler のポインター、 buffer は アップロードしたい 配列の先頭の のポインターでないといけない。
 /// bind_index は get_bind_index から得た値を使うように。
 #[no_mangle]
-pub unsafe extern "C" fn upload_storage_buffer(
+pub unsafe extern "C" fn set_storage_buffer(
     tt_compute_handler_ptr: *mut c_void,
     bind_index: u32,
-    buffer: *const u8,
-    buffer_len: i32,
+    storage_buffer_ptr: *mut c_void,
 ) -> bool {
     let compute_handler = (tt_compute_handler_ptr as *mut TTComputeHandler)
         .as_mut()
         .unwrap();
 
-    let buffer = std::slice::from_raw_parts(buffer, buffer_len as usize);
-
-    let result = compute_handler.upload_buffer(bind_index, buffer, false);
-
-    if let Err(e) = result {
-        debug_log(format!("{:?}", e).as_str());
-    }
-
-    result.is_ok()
-}
-
-/// # Safety
-/// tt_compute_handler_ptr は TTComputeHandler のポインターを
-/// bind_index は get_bind_index から得た値を使うように。
-#[no_mangle]
-pub unsafe extern "C" fn allocate_storage_buffer(
-    tt_compute_handler_ptr: *mut c_void,
-    bind_index: u32,
-    buffer_len: i32,
-) -> bool {
-    let compute_handler = (tt_compute_handler_ptr as *mut TTComputeHandler)
+    let storage_buffer = (storage_buffer_ptr as *mut TTStorageBuffer)
         .as_mut()
         .unwrap();
 
-    let result = compute_handler.allocate_storage_buffer(bind_index,  buffer_len);
-
-    if let Err(e) = result {
-        debug_log(format!("{:?}", e).as_str());
-    }
-
-    result.is_ok()
-}
-
-/// # Safety
-/// ttce_context_ptr は TexTransCoreEngineContext のポインターでないといけない。
-/// *_tt_compute_handler_ptr は TTComputeHandler のポインター、それぞれいれるように、書き換えもするから気を付けようね！
-/// *_bind_index は get_bind_index から得た値を使うように。
-#[no_mangle]
-pub unsafe extern "C" fn move_storage_buffer(
-    ttce_context_ptr: *mut c_void,
-    to_tt_compute_handler_ptr: *mut c_void,
-    to_bind_index: u32,
-    from_tt_compute_handler_ptr: *mut c_void,
-    from_bind_index: u32,
-) -> bool {
-    let engine_ctx = (ttce_context_ptr as *mut TexTransCoreEngineContext)
-        .as_mut()
-        .unwrap();
-    let to_compute_handler = (to_tt_compute_handler_ptr as *mut TTComputeHandler)
-        .as_mut()
-        .unwrap();
-
-    let from_compute_handler = (from_tt_compute_handler_ptr as *mut TTComputeHandler)
-        .as_mut()
-        .unwrap();
-
-    let result = engine_ctx.move_storage_buffer(
-        to_compute_handler,
-        to_bind_index,
-        from_compute_handler,
-        from_bind_index,
-    );
+    let result = compute_handler.set_storage_buffer(bind_index, storage_buffer);
 
     if let Err(e) = result {
         debug_log(format!("{:?}", e).as_str());

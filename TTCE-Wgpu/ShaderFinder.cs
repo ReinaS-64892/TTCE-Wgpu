@@ -112,6 +112,9 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             public ITTComputeKey TransWarpNone { get; private set; }
             public ITTComputeKey TransWarpStretch { get; private set; }
 
+            public ITTComputeKey DepthRenderer { get; private set; }
+            public ITTComputeKey CullingDepth { get; private set; }
+
             public ShaderDictionary(Dictionary<TTComputeType, Dictionary<string, TTComputeShaderID>> dict, Dictionary<TTComputeType, Dictionary<string, ISpecialComputeKey>> specialDicts)
             {
                 _shaderDict = dict;
@@ -133,6 +136,8 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 TransMapping = _shaderDict[TTComputeType.General][nameof(TransMapping)];
                 TransWarpNone = _shaderDict[TTComputeType.General][nameof(TransWarpNone)];
                 TransWarpStretch = _shaderDict[TTComputeType.General][nameof(TransWarpStretch)];
+                DepthRenderer = _shaderDict[TTComputeType.General][nameof(DepthRenderer)];
+                CullingDepth = _shaderDict[TTComputeType.General][nameof(CullingDepth)];
 
                 GenealCompute = new Str2Dict(_shaderDict[TTComputeType.General]);
                 GrabBlend = new Str2Dict(_shaderDict[TTComputeType.GrabBlend]);

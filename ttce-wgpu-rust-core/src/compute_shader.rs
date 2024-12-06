@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::Read;
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use naga::TypeInner::Image;
 use naga::{ImageClass, ImageDimension, Module, StorageFormat};
@@ -10,6 +11,7 @@ use wgpu::util::DeviceExt;
 use wgpu::{ComputePipeline, ShaderModule};
 
 use crate::render_texture::TTRenderTexture;
+use crate::storage_buffer::TTStorageBuffer;
 use crate::tex_trans_core_engine::{
     TTCEWgpuError, TexTransCoreEngineContext, TexTransCoreEngineDevice,
 };
@@ -144,11 +146,61 @@ pub struct TTComputeHandler<'ctx, 'rf, 'cs> {
     compute_shader: &'cs TTComputeShader,
 
     bind_tex_view: HashMap<u32, wgpu::TextureView>,
-    bind_buffer: HashMap<u32, wgpu::Buffer>,
+    bind_constants_buffer: HashMap<u32, wgpu::Buffer>,
+    bind_storage_buffer: HashMap<u32, Arc<wgpu::Buffer>>,
 }
 impl TTComputeHandler<'_, '_, '_> {
     pub fn get_bind_index(&mut self, name: &str) -> Option<u32> {
         self.compute_shader.binding_map.get(name).copied()
+    }
+
+    pub fn upload_constants_buffer(
+        &mut self,
+        bind_index: u32,
+        buffer_data_span: &[u8],
+    ) -> Result<(), TTCEWgpuError> {
+        let Some(bind_type) = self.compute_shader.binding_type.get(&bind_index) else {
+            return Err(TTCEWgpuError::BindingNotFound);
+        };
+        if *bind_type != TTBindingType::ConstantsBuffer {
+            return Err(TTCEWgpuError::BindingIsNotConstantsBuffer);
+        }
+
+        if self.bind_constants_buffer.contains_key(&bind_index) {
+            let _ = self.bind_constants_buffer.remove(&bind_index).unwrap();
+        }
+
+        let label = format!("{}-storage buffer", bind_index);
+        let buffer_desc = wgpu::util::BufferInitDescriptor {
+            label: Some(label.as_str()),
+            usage: wgpu::BufferUsages::UNIFORM,
+            contents: buffer_data_span,
+        };
+        let buffer = self.ctx.engine.device.create_buffer_init(&buffer_desc);
+        self.bind_constants_buffer.insert(bind_index, buffer);
+
+        Ok(())
+    }
+    pub fn set_storage_buffer(
+        &mut self,
+        bind_index: u32,
+        buffer: &TTStorageBuffer,
+    ) -> Result<(), TTCEWgpuError> {
+        let Some(bind_type) = self.compute_shader.binding_type.get(&bind_index) else {
+            return Err(TTCEWgpuError::BindingNotFound);
+        };
+        if *bind_type != TTBindingType::StorageBuffer {
+            return Err(TTCEWgpuError::BindingIsNotStorageBuffer);
+        }
+
+        if self.bind_storage_buffer.contains_key(&bind_index) {
+            let _ = self.bind_storage_buffer.remove(&bind_index).unwrap();
+        }
+
+        self.bind_storage_buffer
+            .insert(bind_index, buffer.buffer.clone());
+
+        Ok(())
     }
 
     pub fn set_render_texture(
@@ -171,79 +223,6 @@ impl TTComputeHandler<'_, '_, '_> {
         Ok(())
     }
 
-    pub fn upload_buffer(
-        &mut self,
-        bind_index: u32,
-        buffer_data_span: &[u8],
-        is_constants: bool,
-    ) -> Result<(), TTCEWgpuError> {
-        let data_type = if is_constants {
-            TTBindingType::ConstantsBuffer
-        } else {
-            TTBindingType::StorageBuffer
-        };
-
-        let Some(bind_type) = self.compute_shader.binding_type.get(&bind_index) else {
-            return Err(TTCEWgpuError::BindingNotFound);
-        };
-        if *bind_type != data_type {
-            return if data_type != TTBindingType::ConstantsBuffer {
-                Err(TTCEWgpuError::BindingIsNotConstantsBuffer)
-            } else {
-                Err(TTCEWgpuError::BindingIsNotStorageBuffer)
-            };
-        }
-
-        if self.bind_buffer.contains_key(&bind_index) {
-            //前のバッファーにもう一度詰めて送る方法わかんなかったから破棄
-            let _ = self.bind_buffer.remove(&bind_index).unwrap();
-        }
-
-        let label = if is_constants {
-            format!("{}-constant buffer", bind_index)
-        } else {
-            format!("{}-storage buffer", bind_index)
-        };
-        let buffer_desc = wgpu::util::BufferInitDescriptor {
-            label: Some(label.as_str()),
-            usage: if is_constants {
-                wgpu::BufferUsages::UNIFORM
-            } else {
-                wgpu::BufferUsages::STORAGE
-            },
-            contents: buffer_data_span,
-        };
-        let buffer = self.ctx.engine.device.create_buffer_init(&buffer_desc);
-        self.bind_buffer.insert(bind_index, buffer);
-
-        Ok(())
-    }
-
-    pub fn allocate_storage_buffer(
-        &mut self,
-        bind_index: u32,
-        buffer_len: i32,
-    ) -> Result<(), TTCEWgpuError> {
-        let Some(bind_type) = self.compute_shader.binding_type.get(&bind_index) else {
-            return Err(TTCEWgpuError::BindingNotFound);
-        };
-        if *bind_type != TTBindingType::StorageBuffer {
-            return Err(TTCEWgpuError::BindingIsNotStorageBuffer);
-        };
-        let label = format!("{}-storage buffer with", bind_index);
-        let alined_len = ((buffer_len + 4) & !3).max(4) as u64;
-        let buffer_desc = wgpu::BufferDescriptor {
-            label: Some(label.as_str()),
-            usage: wgpu::BufferUsages::STORAGE,
-            size: alined_len,
-            mapped_at_creation: false,
-        };
-
-        let buffer = self.ctx.engine.device.create_buffer(&buffer_desc);
-        self.bind_buffer.insert(bind_index, buffer);
-
-        Ok(())
-    }
     pub fn get_work_group_size(&self) -> WorkGroupSize {
         self.compute_shader.work_group_size
     }
@@ -253,12 +232,25 @@ impl TTComputeHandler<'_, '_, '_> {
             binding: *t.0,
             resource: wgpu::BindingResource::TextureView(t.1),
         });
-        let buffer_entries = self.bind_buffer.iter().map(|b| wgpu::BindGroupEntry {
-            binding: *b.0,
-            resource: b.1.as_entire_binding(),
-        });
+        let constants_buffer_entries =
+            self.bind_constants_buffer
+                .iter()
+                .map(|b| wgpu::BindGroupEntry {
+                    binding: *b.0,
+                    resource: b.1.as_entire_binding(),
+                });
+        let storage_buffer_entries =
+            self.bind_storage_buffer
+                .iter()
+                .map(|ab| wgpu::BindGroupEntry {
+                    binding: *ab.0,
+                    resource: ab.1.as_ref().as_entire_binding(),
+                });
 
-        let entries: Vec<_> = tex_entries.chain(buffer_entries).collect();
+        let entries: Vec<_> = tex_entries
+            .chain(constants_buffer_entries)
+            .chain(storage_buffer_entries)
+            .collect();
 
         let bind_group = self
             .ctx
@@ -295,38 +287,9 @@ impl<'ctx> TexTransCoreEngineContext<'ctx> {
             ctx: self,
             compute_shader,
             bind_tex_view: HashMap::new(),
-            bind_buffer: HashMap::new(),
+            bind_constants_buffer: HashMap::new(),
+            bind_storage_buffer: HashMap::new(),
         })
-    }
-
-    pub fn move_storage_buffer(
-        &self,
-        to_handler: &mut TTComputeHandler,
-        to_bind_index: u32,
-        from_handler: &mut TTComputeHandler,
-        from_bind_index: u32,
-    ) -> Result<(), TTCEWgpuError> {
-        if from_handler.compute_shader.binding_type[&from_bind_index]
-            != TTBindingType::StorageBuffer
-        {
-            return Err(TTCEWgpuError::FromBindingIsNotStorageBuffer);
-        }
-        if to_handler.compute_shader.binding_type[&to_bind_index] != TTBindingType::StorageBuffer {
-            return Err(TTCEWgpuError::ToBindingIsNotStorageBuffer);
-        }
-        if !from_handler.bind_buffer.contains_key(&from_bind_index) {
-            return Err(TTCEWgpuError::MoveFromStorageBufferIsNotFound);
-        }
-
-        let buffer = from_handler.bind_buffer.remove(&from_bind_index);
-
-        let Some(buffer) = buffer else {
-            return Err(TTCEWgpuError::Unknown);
-        };
-
-        to_handler.bind_buffer.insert(to_bind_index, buffer);
-
-        Ok(())
     }
 }
 
