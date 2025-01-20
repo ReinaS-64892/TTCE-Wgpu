@@ -112,7 +112,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             }
         }
 
-        public TTStorageBuffer UploadStorageBuffer<T>(Span<T> data, bool downloadable = false) where T : unmanaged
+        public TTStorageBuffer UploadStorageBuffer<T>(ReadOnlySpan<T> data, bool downloadable = false) where T : unmanaged
         {
             if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
 
@@ -170,7 +170,8 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         }
         ITTStorageBuffer ITexTransDriveStorageBufferHolder.AllocateStorageBuffer(int length, bool downloadable)
         { return AllocateStorageBuffer(length, downloadable); }
-        ITTStorageBuffer ITexTransDriveStorageBufferHolder.UploadStorageBuffer<T>(Span<T> data, bool downloadable)
+
+        ITTStorageBuffer ITexTransDriveStorageBufferHolder.UploadStorageBuffer<T>(ReadOnlySpan<T> data, bool downloadable)
         { return UploadStorageBuffer(data, downloadable); }
         public void DownloadBuffer<T>(Span<T> dist, ITTStorageBuffer takeToFrom) where T : unmanaged
         { DownloadBuffer(dist, (TTStorageBuffer)takeToFrom); }
