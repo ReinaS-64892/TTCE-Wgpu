@@ -7,7 +7,11 @@ namespace net.rs64.TexTransCoreEngineForWgpu
     {
         public ShaderFinder.ShaderDictionary ShaderDictionary = null!;//気を付けるようにね！
         public ITexTransStandardComputeKey StandardComputeKey => ShaderDictionary;
-        public ITexTransTransTextureComputeKey TransTextureComputeKey => ShaderDictionary;
+        public TExKeyQ GetExKeyQuery<TExKeyQ>() where TExKeyQ : ITTExtraComputeKeyQuery
+        {
+            if(ShaderDictionary is not TExKeyQ exKeyQ)  { throw new ComputeKeyInterfaceIsNotImplementException($"{GetType().Name} is not supported {typeof(TExKeyQ).GetType().Name}."); }
+            return exKeyQ;
+        }
 
         public ITexTransComputeKeyDictionary<string> GrabBlend => ShaderDictionary.GrabBlend;
 

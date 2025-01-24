@@ -72,7 +72,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             var candidates = Directory.GetFiles(rootPath, fileName, SearchOption.AllDirectories);
             return File.ReadAllText(candidates.First(s => s.Contains("TexTransCore")));
         }
-        public class ShaderDictionary : ITexTransStandardComputeKey, ITexTransTransTextureComputeKey
+        public class ShaderDictionary : ITexTransStandardComputeKey, ITransTextureComputeKey , IQuayGeneraleComputeKey , IBlendingComputeKey , ISamplerComputeKey
         {
             private Dictionary<TTComputeType, Dictionary<string, TTComputeShaderID>> _shaderDict;
             private Dictionary<TTComputeType, Dictionary<string, ISpecialComputeKey>> _specialShaderDict;
