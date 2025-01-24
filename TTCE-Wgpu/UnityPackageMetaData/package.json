@@ -11,6 +11,6 @@
   "url": "https://github.com/ReinaS-64892/TTCE-Wgpu",
   "repo": "https://vpm.rs64.net/vpm.json",
   "dependencies": {
-    "net.rs64.tex-trans-tool": "0.9.0-beta.5"
+    "net.rs64.tex-trans-tool": "0.9.0-beta.7"
   }
 }
