@@ -1,4 +1,4 @@
-name: CreateReleaseDraft
+name: CreateRelease
 
 on:
   workflow_call:
@@ -8,7 +8,7 @@ on:
         required: true
 
 jobs:
-  Create-Release-Draft:
+  Create-Release:
     runs-on: ubuntu-latest
     steps:
     - name: DownloadArtifact
@@ -18,21 +18,20 @@ jobs:
 
     - name: rename
       run: |
-        mv TTCE-Wgpu.zip ttce-wgpu${{ github.event.inputs.tag }}.zip
+        mv TTCE-Wgpu.zip ttce-wgpu-${{ inputs.tag }}.zip
 
     - name: checkout
       uses: actions/checkout@v4
       with:
         path: ./Repo
         fetch-tags: true
-        ref: ${{ github.event.inputs.tag }}
+        ref: ${{ inputs.tag }}
 
     - name: CrateRelease
       uses: softprops/action-gh-release@v2
       with:
-        name: ${{ github.event.inputs.tag }}
-        tag_name: ${{ github.event.inputs.tag }}
-        draft: true
+        name: ${{ inputs.tag }}
+        tag_name: ${{ inputs.tag }}
         files: |
-          ttce-wgpu${{ github.event.inputs.tag }}.zip
+          ttce-wgpu-${{ inputs.tag }}.zip
           Repo/TTCE-Wgpu/UnityPackageMetaData/package.json

@@ -1,4 +1,4 @@
-name: Create-NewVersion-And-Draft-Release
+name: Create-NewVersion-And-Release
 
 on:
   workflow_dispatch:
@@ -19,9 +19,9 @@ jobs:
     with:
       ref: ${{ github.event.inputs.tag }}
 
-  Call-ReleaseDraft:
+  Call-Release:
     needs: [Call-CreatePackage]
-    uses: ./.github/workflows/CreateReleaseDraft.yml
+    uses: ./.github/workflows/CreateRelease.yml
     with:
       tag: ${{ github.event.inputs.tag }}
 
