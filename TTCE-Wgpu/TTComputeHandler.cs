@@ -17,6 +17,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             _handler = handle;
         }
 
+        public string Name { get; set; } = "TTCE-Wgpu-ComputeHandler";
         public int NameToID(string name)
         {
             if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
@@ -90,6 +91,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             }
         }
         public (uint x, uint y, uint z) WorkGroupSize => GetWorkGroupSize();
+
         public void Dispatch(uint x, uint y, uint z)
         {
             if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }

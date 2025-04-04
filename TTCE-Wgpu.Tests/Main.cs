@@ -7,6 +7,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 
 Console.WriteLine("Test Run");
+Console.WriteLine("debug - CurrentDirectory:" + Directory.GetCurrentDirectory());
 
 
 using var engineTest = new TestTTCEWgpuEngine(TexTransCoreTextureFormat.Byte, true, TTCEWgpuDevice.RequestDevicePreference.IntegratedGPUOrCPU);
@@ -35,7 +36,7 @@ var ctx = engineTest.GetCtx();
 
 //     ctx.UploadTexture<byte>(rt, imageBuf.AsSpan(), TexTransCoreTextureFormat.Byte);
 
-    // var selectiveColor = new SelectiveColorAdjustment(new(), new(), new(), new(), new(), new(), new(), new(), new(0,0,0,-0.3f), false);
+// var selectiveColor = new SelectiveColorAdjustment(new(), new(), new(), new(), new(), new(), new(), new(), new(0,0,0,-0.3f), false);
 //     selectiveColor.GrabBlending(ctx, rt);
 
 //     ctx.DownloadTexture<byte>(imageBuf, TexTransCoreTextureFormat.Byte, rt);

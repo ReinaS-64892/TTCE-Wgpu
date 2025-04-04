@@ -99,13 +99,13 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 }
             }
         }
-        public TTStorageBuffer AllocateStorageBuffer(int length, bool downloadable = false)
+        public TTStorageBuffer AllocateStorageBuffer<T>(int length, bool downloadable = false) where T : unmanaged
         {
             if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineContextHandler is dropped"); }
 
             unsafe
             {
-                var storageBufferPtr = new IntPtr(NativeMethod.allocate_storage_buffer((void*)_handler.DangerousGetHandle(), length, downloadable));
+                var storageBufferPtr = new IntPtr(NativeMethod.allocate_storage_buffer((void*)_handler.DangerousGetHandle(), sizeof(T) * length, downloadable));
                 var sb = new TTStorageBuffer(this, new TTStorageBufferHandler(storageBufferPtr), downloadable);
                 _storageBuffers.Add(sb);
                 return sb;
@@ -168,9 +168,8 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         {
             DownloadTexture(dataDist, format, (TTRenderTexture)renderTexture);
         }
-        ITTStorageBuffer ITexTransDriveStorageBufferHolder.AllocateStorageBuffer(int length, bool downloadable)
-        { return AllocateStorageBuffer(length, downloadable); }
-
+        ITTStorageBuffer ITexTransDriveStorageBufferHolder.AllocateStorageBuffer<T>(int length, bool downloadable)
+        { return AllocateStorageBuffer<T>(length, downloadable); }
         ITTStorageBuffer ITexTransDriveStorageBufferHolder.UploadStorageBuffer<T>(ReadOnlySpan<T> data, bool downloadable)
         { return UploadStorageBuffer(data, downloadable); }
         public void DownloadBuffer<T>(Span<T> dist, ITTStorageBuffer takeToFrom) where T : unmanaged
@@ -199,25 +198,25 @@ namespace net.rs64.TexTransCoreEngineForWgpu
     }
 
     internal static class TTCEWgpuEngineUtil
-    {
-        public static TTRenderTexture Unwrap(this ITTRenderTexture renderTexture) => (TTRenderTexture)renderTexture;
-        public static TTComputeShaderID Unwrap(this ITTComputeKey computeKey) => (TTComputeShaderID)computeKey;
+{
+    public static TTRenderTexture Unwrap(this ITTRenderTexture renderTexture) => (TTRenderTexture)renderTexture;
+    public static TTComputeShaderID Unwrap(this ITTComputeKey computeKey) => (TTComputeShaderID)computeKey;
 
+}
+
+class TexTransCoreEngineContextHandler : SafeHandle
+{
+    public TexTransCoreEngineContextHandler(IntPtr handle) : base(IntPtr.Zero, true)
+    {
+        SetHandle(handle);
     }
 
-    class TexTransCoreEngineContextHandler : SafeHandle
+    public override bool IsInvalid => handle == IntPtr.Zero;
+
+    protected override bool ReleaseHandle()
     {
-        public TexTransCoreEngineContextHandler(IntPtr handle) : base(IntPtr.Zero, true)
-        {
-            SetHandle(handle);
-        }
-
-        public override bool IsInvalid => handle == IntPtr.Zero;
-
-        protected override bool ReleaseHandle()
-        {
-            unsafe { NativeMethod.drop_ttce_context((void*)handle); }
-            return true;
-        }
+        unsafe { NativeMethod.drop_ttce_context((void*)handle); }
+        return true;
     }
+}
 }
