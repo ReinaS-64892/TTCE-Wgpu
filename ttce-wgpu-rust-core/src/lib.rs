@@ -1,4 +1,5 @@
 mod compute_shader;
+mod dxc_ctx;
 mod render_texture;
 mod storage_buffer;
 mod tex_trans_core_engine;
@@ -6,6 +7,7 @@ mod tex_trans_core_engine;
 use std::{ffi::c_void, ops::Deref, sync::Mutex};
 
 use compute_shader::{TTComputeHandler, TTComputeShaderID};
+use dxc_ctx::DirectXCompilerContext;
 use once_cell::sync::OnceCell;
 use render_texture::TTRenderTexture;
 use storage_buffer::TTStorageBuffer;
@@ -98,7 +100,7 @@ pub extern "C" fn create_tex_trans_core_engine_device(
             let device_feature = wgpu::DeviceDescriptor {
                 required_features: wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
                     | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM,
-                    required_limits: wgpu::Limits {
+                required_limits: wgpu::Limits {
                     max_storage_textures_per_shader_stage: 8,
                     max_bind_groups: 1,
                     ..Default::default()
@@ -110,7 +112,9 @@ pub extern "C" fn create_tex_trans_core_engine_device(
         })
         .unwrap();
 
-    let ttce = tex_trans_core_engine::TexTransCoreEngineDevice::new(device, queue);
+    let dxc_ctx = DirectXCompilerContext::new().expect("DirectCompilerContext creation failed");
+
+    let ttce = tex_trans_core_engine::TexTransCoreEngineDevice::new(device, queue, dxc_ctx);
 
     Box::into_raw(Box::new(ttce)) as *mut c_void
 }

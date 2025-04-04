@@ -11,7 +11,7 @@ jobs:
   rust-core-build:
     uses: ./.github/workflows/RustCoreBuild.yml
     with:
-      ref: ${{ github.event.inputs.ref }}
+      ref: ${{ inputs.ref }}
   create-package:
     runs-on: ubuntu-latest
     needs: [rust-core-build]
@@ -19,7 +19,7 @@ jobs:
       - name: checkout TTCE-Wgpu
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref }}
+          ref: ${{ inputs.ref }}
 
       - name: mkdir
         run: |

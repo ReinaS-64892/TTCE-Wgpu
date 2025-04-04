@@ -5,25 +5,25 @@ using System.Text.Json.Nodes;
 
 public static class SetTTTDependencyVersion
 {
-    const string TTT_PACKAGE_JASON = @"ProjectPackages\TexTransTool\package.json";
-    const string PACKAGE_JASON = @"TTCE-Wgpu\UnityPackageMetaData\package.json";
-    const string TTT_EDITOR_ASMDEF = @"ProjectPackages\TexTransTool\Editor\net.rs64.tex-trans-tool.editor.asmdef";
+    const string TTC_PACKAGE_JASON = @"ProjectPackages/TexTransCore/package.json";
+    const string PACKAGE_JASON = @"TTCE-Wgpu/UnityPackageMetaData/package.json";
+    const string TTT_EDITOR_ASMDEF = @"ProjectPackages/TexTransTool/Editor/net.rs64.tex-trans-tool.editor.asmdef";
     public static void WriteTTTDependVersion()
     {
         var packageJson = JsonNode.Parse(File.ReadAllText(PACKAGE_JASON));
-        var tttPackageJson = JsonNode.Parse(File.ReadAllText(TTT_PACKAGE_JASON));
+        var ttcPackageJson = JsonNode.Parse(File.ReadAllText(TTC_PACKAGE_JASON));
 
-        if (packageJson is null || tttPackageJson is null)
+        if (packageJson is null || ttcPackageJson is null)
         {
             Console.WriteLine($"Json parse failed!");
             throw new NullReferenceException();
         }
 
 
-        var tttId = "net.rs64.tex-trans-tool";
+        var tttId = "net.rs64.tex-trans-core";
         var dependencies = packageJson["dependencies"];
         if (dependencies is null) { Console.WriteLine($"ttt dependency not found!"); throw new NullReferenceException(); }
-        dependencies[tttId] = tttPackageJson["version"]?.GetValue<string>();
+        dependencies[tttId] = ttcPackageJson["version"]?.GetValue<string>();
 
         var outOpt = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.General);
         outOpt.WriteIndented = true;

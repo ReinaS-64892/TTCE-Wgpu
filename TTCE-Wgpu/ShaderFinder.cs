@@ -70,9 +70,9 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public static string FindTextAsset(string rootPath, string fileName)
         {
             var candidates = Directory.GetFiles(rootPath, fileName, SearchOption.AllDirectories);
-            return File.ReadAllText(candidates.First(s => s.Contains("TexTransCore")));
+            return File.ReadAllText(candidates.First(s => (s.Contains("Tex") && s.Contains("Trans")) || (s.Contains("tex") && s.Contains("trans")) || s.Contains("TTCE") ));
         }
-        public class ShaderDictionary : ITexTransStandardComputeKey, ITransTextureComputeKey , IQuayGeneraleComputeKey , IBlendingComputeKey , ISamplerComputeKey
+        public class ShaderDictionary : ITexTransStandardComputeKey, ITransTextureComputeKey, IQuayGeneraleComputeKey, IBlendingComputeKey, ISamplerComputeKey
         {
             private Dictionary<TTComputeType, Dictionary<string, TTComputeShaderID>> _shaderDict;
             private Dictionary<TTComputeType, Dictionary<string, ISpecialComputeKey>> _specialShaderDict;
@@ -136,7 +136,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 FillGOnly = _shaderDict[TTComputeType.General][nameof(FillGOnly)];
 
                 TransMapping = _shaderDict[TTComputeType.General][nameof(TransMapping)];
-                TransMappingWithDepth  = _shaderDict[TTComputeType.General][nameof(TransMappingWithDepth)];
+                TransMappingWithDepth = _shaderDict[TTComputeType.General][nameof(TransMappingWithDepth)];
 
                 TransWarpNone = _shaderDict[TTComputeType.General][nameof(TransWarpNone)];
                 TransWarpStretch = _shaderDict[TTComputeType.General][nameof(TransWarpStretch)];

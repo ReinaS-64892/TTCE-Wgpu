@@ -2,9 +2,11 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Display;
 
+use hassle_rs::Dxc;
 use wgpu::CommandEncoder;
 
 use crate::compute_shader::{TTComputeShader, TTComputeShaderID};
+use crate::dxc_ctx::DirectXCompilerContext;
 use crate::render_texture::{ConvertTextureFormat, TTRenderTexture};
 use crate::{TexTransCoreTextureChannel, TexTransCoreTextureFormat};
 
@@ -15,6 +17,8 @@ pub struct TexTransCoreEngineDevice {
 
     pub(crate) compute_shader: Vec<TTComputeShader>,
     pub(crate) converter_id: HashMap<ConvertTextureFormat, TTComputeShaderID>,
+
+    pub(crate) dx_compiler: DirectXCompilerContext,
 
     default_render_texture_format: TexTransCoreTextureFormat,
     max_command_stack_count: u32,
@@ -29,7 +33,7 @@ pub struct TexTransCoreEngineContext<'a> {
 }
 
 impl TexTransCoreEngineDevice {
-    pub fn new(device: wgpu::Device, queue: wgpu::Queue) -> Self {
+    pub fn new(device: wgpu::Device, queue: wgpu::Queue, dxc_ctx: DirectXCompilerContext) -> Self {
         TexTransCoreEngineDevice {
             device,
             queue,
@@ -37,9 +41,10 @@ impl TexTransCoreEngineDevice {
             compute_shader: Vec::new(),
             converter_id: HashMap::new(),
 
+            dx_compiler: dxc_ctx,
+
             default_render_texture_format: TexTransCoreTextureFormat::Float,
             max_command_stack_count: 16,
-            // is_linear: false,
         }
     }
     pub fn create_ctx(&self) -> TexTransCoreEngineContext {
@@ -104,6 +109,9 @@ impl TexTransCoreEngineDevice {
         TTRenderTexture {
             texture: render_texture,
         }
+    }
+    pub(crate) fn dx_compiler(&self) -> &DirectXCompilerContext{
+        &self.dx_compiler
     }
 }
 pub(crate) struct TTRtRequestDescriptor {

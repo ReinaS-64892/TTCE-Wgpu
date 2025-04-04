@@ -19,23 +19,23 @@
   </PropertyGroup>
 
   <Target Name="Rust Cargo Build" BeforeTargets="Compile">
-    <Exec Command="cargo build" WorkingDirectory="..\ttce-wgpu-rust-core" />
+    <Exec Command="cargo build" WorkingDirectory="../ttce-wgpu-rust-core" />
   </Target>
 
   <ItemGroup>
-    <Content Include="..\ttce-wgpu-rust-core\target\debug\ttce_wgpu_rust_core.dll" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' ">
+    <Content Include="../ttce-wgpu-rust-core/target/debug/ttce_wgpu_rust_core.dll" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' ">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\ttce-wgpu-rust-core\target\debug\libttce_wgpu_rust_core.so" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' ">
+    <Content Include="../ttce-wgpu-rust-core/target/debug/libttce_wgpu_rust_core.so" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' ">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\ttce-wgpu-rust-core\target\debug\libttce_wgpu_rust_core.dylib" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' ">
+    <Content Include="../ttce-wgpu-rust-core/target/debug/libttce_wgpu_rust_core.dylib" Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' ">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TexTransTool.csproj\net.rs64.tex-trans-core\net.rs64.tex-trans-core.csproj"/>
+    <ProjectReference Include="../ProjectPackages/TexTransCore/csproj~/net.rs64.tex-trans-core/net.rs64.tex-trans-core.csproj"/>
   </ItemGroup>
 
 </Project>

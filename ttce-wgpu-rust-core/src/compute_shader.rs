@@ -66,7 +66,7 @@ impl TexTransCoreEngineDevice {
             }
         };
 
-        let spv = hassle_rs::compile_hlsl(
+        let spv = self.dx_compiler().compile_hlsl(
             hlsl_file_path,
             hlsl_string.as_str(),
             "CSMain",

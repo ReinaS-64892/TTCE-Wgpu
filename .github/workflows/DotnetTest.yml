@@ -28,6 +28,10 @@ jobs:
           repository: ReinaS-64892/TexTransTool
           ref: dev
           path: ProjectPackages/TexTransTool
+      - uses: actions/checkout@v4
+        with:
+          repository: ReinaS-64892/TexTransCore
+          path: ProjectPackages/TexTransCore
 
       - name: Debug output
         run: |
