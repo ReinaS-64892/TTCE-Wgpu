@@ -6,23 +6,17 @@ namespace net.rs64.TexTransCoreEngineForWgpu.Tests;
 
 public class TestTTCEWgpuEngine : IDisposable
 {
-    public const string ShaderFindingPath = "ProjectPackages/TexTransTool";
-    public TTCEWgpuDevice Device;
-    private readonly ShaderFinder.ShaderDictionary _shaderDict;
+    public TTCEWgpuDeviceWidthShaderDictionary Device;
     private readonly TTCEWgpuRCDebugPrintToConsole? _debugLogHandler;
 
     public TestTTCEWgpuEngine(TexTransCoreTextureFormat defaultFormat = TexTransCoreTextureFormat.Byte, bool showDebugLog = false, TTCEWgpuDevice.RequestDevicePreference requestDevice = TTCEWgpuDevice.RequestDevicePreference.Auto)
     {
         _debugLogHandler = showDebugLog ? new TTCEWgpuRCDebugPrintToConsole() : null;
-        Device = new TTCEWgpuDevice(requestDevice);
-        Device.SetDefaultTextureFormat(defaultFormat);
-        _shaderDict = ShaderFinder.RegisterShaders(Device, ShaderFinder.GetAllShaderPathWithCurrentDirectory(), ShaderFinder.CurrentDirectoryFind);
+        Device = new TTCEWgpuDeviceWidthShaderDictionary(requestDevice, defaultFormat);
     }
     public TTCEWgpuContextWithShaderDictionary GetCtx()
     {
-        var ctx = Device.GetContext<TTCEWgpuContextWithShaderDictionary>();
-        ctx.ShaderDictionary = _shaderDict;
-        return ctx;
+        return Device.GetTTCEWgpuContext();
     }
     public void Dispose()
     {

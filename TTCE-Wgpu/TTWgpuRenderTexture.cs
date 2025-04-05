@@ -3,11 +3,12 @@ using System.Runtime.InteropServices;
 using net.rs64.TexTransCore;
 namespace net.rs64.TexTransCoreEngineForWgpu
 {
-    public sealed class TTRenderTexture : IDisposable, ITTRenderTexture
+    public sealed class TTWgpuRenderTexture : IDisposable, ITTRenderTexture
     {
         TTCEWgpuContextBase _engineContext;
         TTRenderTextureHandler? _handler;
         private bool _isDisposed = false;
+        public event Action<TTWgpuRenderTexture>? DisposeCall;
         TexTransCore.TexTransCoreTextureChannel _channel;
 
         string _name;
@@ -21,7 +22,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public TexTransCore.TexTransCoreTextureChannel ContainsChannel => _channel;
 
-        internal TTRenderTexture(TTCEWgpuContextBase engineContext, TTRenderTextureHandler handle, TexTransCore.TexTransCoreTextureChannel channel)
+        internal TTWgpuRenderTexture(TTCEWgpuContextBase engineContext, TTRenderTextureHandler handle, TexTransCore.TexTransCoreTextureChannel channel)
         {
             _engineContext = engineContext;
             _handler = handle;
@@ -67,6 +68,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 _engineContext._renderTextures.Remove(this);
                 _handler?.Dispose();
                 _handler = null;
+                DisposeCall?.Invoke(this);
             }
 
             _isDisposed = true;

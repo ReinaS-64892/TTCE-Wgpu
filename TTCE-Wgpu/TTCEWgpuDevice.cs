@@ -7,18 +7,20 @@ using net.rs64.TexTransCore;
 namespace net.rs64.TexTransCoreEngineForWgpu
 {
 
-    public sealed class TTCEWgpuDevice : IDisposable
+    public class TTCEWgpuDevice : IDisposable
     {
         TexTransCoreEngineDeviceHandler? _handler;
         private bool _isDisposed;
-        internal HashSet<TTCEWgpuContextBase> _contexts;
+        private HashSet<TTCEWgpuContextBase> _contexts;
         public bool AllowShaderCreation => _contexts.Count == 0;
+        private bool isShaderRegistered = false;
         public TTCEWgpuDevice(RequestDevicePreference preference = RequestDevicePreference.Auto)
         {
             _handler = TexTransCoreEngineDeviceHandler.Create(preference);
             _contexts = new();
 
             RegisterFormatConvertor();
+            SetDefaultTextureFormat(TexTransCore.TexTransCoreTextureFormat.Byte);
         }
         public enum RequestDevicePreference : uint
         {
@@ -37,8 +39,9 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 NativeMethod.register_format_convertor((void*)_handler.DangerousGetHandle());
             }
         }
-        public void SetDefaultTextureFormat(TexTransCore.TexTransCoreTextureFormat format)
+        protected void SetDefaultTextureFormat(TexTransCore.TexTransCoreTextureFormat format)
         {
+            if (isShaderRegistered) { throw new InvalidOperationException("shader are created, not set texture format !!!"); }
             if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
             if (AllowShaderCreation is false) { throw new InvalidOperationException("shader creation is not allowed"); }
 
@@ -51,6 +54,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         {
             if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
             if (AllowShaderCreation is false) { throw new InvalidOperationException("shader creation is not allowed"); }
+            isShaderRegistered = true;
 
             if (hlslSource is not null)
                 unsafe
@@ -75,7 +79,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 }
         }
 
-        public TTCE GetContext<TTCE>() where TTCE : TTCEWgpuContextBase, new()
+        protected TTCE CreateContext<TTCE>() where TTCE : TTCEWgpuContextBase, new()
         {
             if (_handler is null) { throw new ObjectDisposedException("TexTransCoreEngineDeviceHandler is dropped"); }
             unsafe
@@ -88,7 +92,10 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 return ctx;
             }
         }
-
+        public TTCEWgpuContextBase GetTTCEWgpuContext()
+        {
+            return CreateContext<TTCEWgpuContextBase>();
+        }
 
         void Dispose(bool disposing)
         {

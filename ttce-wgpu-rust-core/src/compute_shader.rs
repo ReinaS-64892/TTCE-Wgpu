@@ -100,7 +100,7 @@ impl TexTransCoreEngineDevice {
         // )?;
 
         // debug_log(operator_name.as_str());
-        // debug_log(wgsl_string.as_str());
+        // debug_log(hlsl_string.as_str());
         // debug_log(format!("{:?}", naga_ir).as_str());
 
         let cs_module = self

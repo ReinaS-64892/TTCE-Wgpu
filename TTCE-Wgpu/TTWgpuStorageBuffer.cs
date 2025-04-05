@@ -3,15 +3,16 @@ using System.Runtime.InteropServices;
 using net.rs64.TexTransCore;
 namespace net.rs64.TexTransCoreEngineForWgpu
 {
-    public sealed class TTStorageBuffer : IDisposable, ITTStorageBuffer
+    public sealed class TTWgpuStorageBuffer : IDisposable, ITTStorageBuffer
     {
         TTCEWgpuContextBase _engineContext;
         TTStorageBufferHandler? _handler;
         private bool _isDisposed;
+        public event Action<TTWgpuStorageBuffer>? DisposeCall;
         internal readonly bool _downloadable;
 
         public string Name { get; set; } = "Wgpu-TTStorageBuffer";
-        internal TTStorageBuffer(TTCEWgpuContextBase engineContext, TTStorageBufferHandler handler, bool downloadable)
+        internal TTWgpuStorageBuffer(TTCEWgpuContextBase engineContext, TTStorageBufferHandler handler, bool downloadable)
         {
             _engineContext = engineContext;
             _handler = handler;
@@ -27,6 +28,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 _engineContext._storageBuffers.Remove(this);
                 _handler?.Dispose();
                 _handler = null;
+                DisposeCall?.Invoke(this);
             }
 
             _isDisposed = true;

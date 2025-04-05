@@ -5,13 +5,14 @@ using net.rs64.TexTransCore;
 namespace net.rs64.TexTransCoreEngineForWgpu
 {
 
-    public sealed class TTComputeHandler : IDisposable, ITTComputeHandler
+    public sealed class TTWgpuComputeHandler : IDisposable, ITTComputeHandler
     {
         TTCEWgpuContextBase _engineContext;
         internal TTComputeHandlerPtrHandler? _handler;
         private bool _isDisposed = false;
+        public event Action<TTWgpuComputeHandler>? DisposeCall;
 
-        internal TTComputeHandler(TTCEWgpuContextBase engineContext, TTComputeHandlerPtrHandler handle)
+        internal TTWgpuComputeHandler(TTCEWgpuContextBase engineContext, TTComputeHandlerPtrHandler handle)
         {
             _engineContext = engineContext;
             _handler = handle;
@@ -52,7 +53,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 throw new TTCEWgpuNativeError("Buffer upload failed! please see log!");
             }
         }
-        public void SetStorageBuffer(int nameID, TTStorageBuffer bufferHolder)
+        public void SetStorageBuffer(int nameID, TTWgpuStorageBuffer bufferHolder)
         {
             if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
 
@@ -66,7 +67,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 throw new TTCEWgpuNativeError("Buffer upload failed! please see log!");
             }
         }
-        public void SetRenderTexture(int nameID, TTRenderTexture renderTexture)
+        public void SetRenderTexture(int nameID, TTWgpuRenderTexture renderTexture)
         {
             if (_handler is null) { throw new ObjectDisposedException("TTComputeHandlerPtrHandler is dropped"); }
 
@@ -108,12 +109,12 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 
         public void SetTexture(int id, ITTRenderTexture tex)
         {
-            if (tex is not TTRenderTexture rt) { throw new InvalidCastException(); }
+            if (tex is not TTWgpuRenderTexture rt) { throw new InvalidCastException(); }
             SetRenderTexture(id, rt);
         }
         public void SetStorageBuffer(int id, ITTStorageBuffer storageBuffer)
         {
-            if (storageBuffer is not TTStorageBuffer sb) { throw new InvalidCastException(); }
+            if (storageBuffer is not TTWgpuStorageBuffer sb) { throw new InvalidCastException(); }
             SetStorageBuffer(id, sb);
         }
 
@@ -126,6 +127,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 _engineContext._computeHandlers.Remove(this);
                 _handler?.Dispose();
                 _handler = null;
+                DisposeCall?.Invoke(this);
             }
 
             _isDisposed = true;

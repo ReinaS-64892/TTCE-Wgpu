@@ -8,6 +8,10 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 {
     public static class ShaderFinder
     {
+        public static ShaderDictionary RegisterShadersWithCurrentDirectory(this TTCEWgpuDevice device)
+        {
+            return RegisterShaders(device, GetAllShaderPathWithCurrentDirectory(), CurrentDirectoryFind);
+        }
         public static ShaderDictionary RegisterShaders(this TTCEWgpuDevice device, IEnumerable<string> shaderPaths, Func<string, string> findTemplate)
         {
             var shaderDicts = new Dictionary<TTComputeType, Dictionary<string, TTComputeShaderID>>();
@@ -48,9 +52,11 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                         {
                             var csCodeR = findTemplate("TextureResizingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
                             var csCodeT = findTemplate("TransSamplingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
+                            var csCodeA = findTemplate("AtlasSamplingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
                             var resizingKey = device.RegisterComputeShaderFromHLSL(path, csCodeR);
                             var transSamplerKey = device.RegisterComputeShaderFromHLSL(path, csCodeT);
-                            specialShaderDicts[descriptions.ComputeType][computeName] = new SamplerKey(resizingKey, transSamplerKey);
+                            var atlasSamplerKey = device.RegisterComputeShaderFromHLSL(path, csCodeA);
+                            specialShaderDicts[descriptions.ComputeType][computeName] = new SamplerKey(resizingKey, transSamplerKey,atlasSamplerKey);
                             break;
                         }
                 }
@@ -70,9 +76,16 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         public static string FindTextAsset(string rootPath, string fileName)
         {
             var candidates = Directory.GetFiles(rootPath, fileName, SearchOption.AllDirectories);
-            return File.ReadAllText(candidates.First(s => (s.Contains("Tex") && s.Contains("Trans")) || (s.Contains("tex") && s.Contains("trans")) || s.Contains("TTCE") ));
+            return File.ReadAllText(candidates.First(s => (s.Contains("Tex") && s.Contains("Trans")) || (s.Contains("tex") && s.Contains("trans")) || s.Contains("TTCE")));
         }
-        public class ShaderDictionary : ITexTransStandardComputeKey, ITransTextureComputeKey, IQuayGeneraleComputeKey, IBlendingComputeKey, ISamplerComputeKey
+        public class ShaderDictionary : ITexTransStandardComputeKey
+        , ITransTextureComputeKey
+        , IQuayGeneraleComputeKey
+        , IBlendingComputeKey
+        , ISamplerComputeKey
+        , INearTransComputeKey
+        , IAtlasComputeKey
+        , IAtlasSamplerComputeKey
         {
             private Dictionary<TTComputeType, Dictionary<string, TTComputeShaderID>> _shaderDict;
             private Dictionary<TTComputeType, Dictionary<string, ISpecialComputeKey>> _specialShaderDict;
@@ -116,6 +129,14 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             public ITTComputeKey DepthRenderer { get; private set; }
             public ITTComputeKey CullingDepth { get; private set; }
 
+            public ITTComputeKey NearTransTexture { get; private set; }
+            public ITTComputeKey PositionMapper { get; private set; }
+            public ITTComputeKey FilleFloat4StorageBuffer { get; private set; }
+            public ITTComputeKey NearDistanceFadeWrite { get; private set; }
+            public ITTComputeKey RectangleTransMapping { get; private set; }
+            public ITTComputeKey MergeAtlasedTextures { get; private set; }
+
+            public ITexTransComputeKeyDictionary<ITTSamplerKey> AtlasSamplerKey { get; private set; }
 
             public ShaderDictionary(Dictionary<TTComputeType, Dictionary<string, TTComputeShaderID>> dict, Dictionary<TTComputeType, Dictionary<string, ISpecialComputeKey>> specialDicts)
             {
@@ -154,6 +175,15 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                 TransSamplerKey = new SamplerToTransSamplerKey();
 
                 DefaultSampler = SamplerKey["AverageSampling"];
+
+                NearTransTexture = _shaderDict[TTComputeType.General][nameof(NearTransTexture)];
+                PositionMapper = _shaderDict[TTComputeType.General][nameof(PositionMapper)];
+                FilleFloat4StorageBuffer = _shaderDict[TTComputeType.General][nameof(FilleFloat4StorageBuffer)];
+                NearDistanceFadeWrite = _shaderDict[TTComputeType.General][nameof(NearDistanceFadeWrite)];
+                RectangleTransMapping = _shaderDict[TTComputeType.General][nameof(RectangleTransMapping)];
+                MergeAtlasedTextures = _shaderDict[TTComputeType.General][nameof(MergeAtlasedTextures)];
+
+                AtlasSamplerKey = new SamplerToAtlasSamplerKey();
             }
 
             class Str2Dict : ITexTransComputeKeyDictionary<string>
@@ -201,6 +231,10 @@ namespace net.rs64.TexTransCoreEngineForWgpu
             {
                 public ITTComputeKey this[ITTSamplerKey key] => ((SamplerKey)key).TransSamplerComputeKey;
             }
+            class SamplerToAtlasSamplerKey : ITexTransComputeKeyDictionary<ITTSamplerKey>
+            {
+                public ITTComputeKey this[ITTSamplerKey key] => ((SamplerKey)key).AtlasSamplerComputeKey;
+            }
         }
 
         class BlendKey : ITTBlendKey, ISpecialComputeKey
@@ -216,11 +250,13 @@ namespace net.rs64.TexTransCoreEngineForWgpu
         {
             public ITTComputeKey ResizingComputeKey;
             public ITTComputeKey TransSamplerComputeKey;
+            public ITTComputeKey AtlasSamplerComputeKey;
 
-            public SamplerKey(ITTComputeKey resizingKey, ITTComputeKey transSamplerKey)
+            public SamplerKey(ITTComputeKey resizingKey, ITTComputeKey transSamplerKey, ITTComputeKey atlasSamplerKey)
             {
                 ResizingComputeKey = resizingKey;
                 TransSamplerComputeKey = transSamplerKey;
+                AtlasSamplerComputeKey = atlasSamplerKey;
             }
         }
 
