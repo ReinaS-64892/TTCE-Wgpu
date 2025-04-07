@@ -8,7 +8,9 @@ public static class SetTTTDependencyVersion
     const string TTC_PACKAGE_JASON = @"ProjectPackages/TexTransCore/package.json";
     const string PACKAGE_JASON = @"TTCE-Wgpu/UnityPackageMetaData/package.json";
     const string TTT_EDITOR_ASMDEF = @"ProjectPackages/TexTransTool/Editor/net.rs64.tex-trans-tool.editor.asmdef";
+    const string TTT_RUNTIME_ASMDEF = @"ProjectPackages/TexTransTool/Runtime/net.rs64.tex-trans-tool.runtime.asmdef";
     const string TTT_NDMF_ASMDEF = @"ProjectPackages/TexTransTool/Editor/NDMF/net.rs64.tex-trans-tool.ndmf.asmdef";
+
     public static void WriteTTCDependVersion()
     {
         var packageJson = JsonNode.Parse(File.ReadAllText(PACKAGE_JASON));
@@ -34,6 +36,7 @@ public static class SetTTTDependencyVersion
     {
         WriteTTTDependentTTCEWgpuVersionForAsmDef(TTT_EDITOR_ASMDEF);
         WriteTTTDependentTTCEWgpuVersionForAsmDef(TTT_NDMF_ASMDEF);
+        WriteTTTDependentTTCEWgpuVersionForAsmDef(TTT_RUNTIME_ASMDEF);
     }
 
     private static void WriteTTTDependentTTCEWgpuVersionForAsmDef(string targetAsmDefPath)
