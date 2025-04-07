@@ -64,12 +64,16 @@ pub extern "C" fn create_tex_trans_core_engine_device(
         .block_on(async move {
             let instance = wgpu::Instance::default();
             let adapter = match preference {
-                RequestDevicePreference::Auto => Some(
-                    instance
-                        .request_adapter(&wgpu::RequestAdapterOptions::default())
-                        .await
-                        .expect("adapter request failed when ttce device creation"),
-                ),
+                RequestDevicePreference::Auto => instance
+                    .enumerate_adapters(Backends::DX12 | Backends::VULKAN | Backends::METAL)// OpenGL 系を排除する
+                    .into_iter()
+                    .find(|_| true),// 何かもっといい手段ないのか？
+                // Some(
+                //     instance
+                //         .request_adapter(&wgpu::RequestAdapterOptions::default())
+                //         .await
+                //         .expect("adapter request failed when ttce device creation"),
+                // ),
                 RequestDevicePreference::IntegratedGPUOrCPU => instance
                     .enumerate_adapters(Backends::all())
                     .into_iter()
