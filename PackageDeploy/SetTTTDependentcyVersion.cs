@@ -8,7 +8,8 @@ public static class SetTTTDependencyVersion
     const string TTC_PACKAGE_JASON = @"ProjectPackages/TexTransCore/package.json";
     const string PACKAGE_JASON = @"TTCE-Wgpu/UnityPackageMetaData/package.json";
     const string TTT_EDITOR_ASMDEF = @"ProjectPackages/TexTransTool/Editor/net.rs64.tex-trans-tool.editor.asmdef";
-    public static void WriteTTTDependVersion()
+    const string TTT_NDMF_ASMDEF = @"ProjectPackages/TexTransTool/Editor/NDMF/net.rs64.tex-trans-tool.ndmf.asmdef";
+    public static void WriteTTCDependVersion()
     {
         var packageJson = JsonNode.Parse(File.ReadAllText(PACKAGE_JASON));
         var ttcPackageJson = JsonNode.Parse(File.ReadAllText(TTC_PACKAGE_JASON));
@@ -20,10 +21,10 @@ public static class SetTTTDependencyVersion
         }
 
 
-        var tttId = "net.rs64.tex-trans-core";
+        var ttcId = "net.rs64.tex-trans-core";
         var dependencies = packageJson["dependencies"];
         if (dependencies is null) { Console.WriteLine($"ttt dependency not found!"); throw new NullReferenceException(); }
-        dependencies[tttId] = ttcPackageJson["version"]?.GetValue<string>();
+        dependencies[ttcId] = ttcPackageJson["version"]?.GetValue<string>();
 
         var outOpt = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.General);
         outOpt.WriteIndented = true;
@@ -31,7 +32,13 @@ public static class SetTTTDependencyVersion
     }
     public static void WriteTTTDependentTTCEWgpuVersion()
     {
-        var asmDef = JsonNode.Parse(File.ReadAllText(TTT_EDITOR_ASMDEF));
+        WriteTTTDependentTTCEWgpuVersionForAsmDef(TTT_EDITOR_ASMDEF);
+        WriteTTTDependentTTCEWgpuVersionForAsmDef(TTT_NDMF_ASMDEF);
+    }
+
+    private static void WriteTTTDependentTTCEWgpuVersionForAsmDef(string targetAsmDefPath)
+    {
+        var asmDef = JsonNode.Parse(File.ReadAllText(targetAsmDefPath));
         var packageJson = JsonNode.Parse(File.ReadAllText(PACKAGE_JASON));
 
         if (packageJson is null || asmDef is null)
@@ -50,6 +57,6 @@ public static class SetTTTDependencyVersion
 
         var outOpt = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.General);
         outOpt.WriteIndented = true;
-        File.WriteAllText(TTT_EDITOR_ASMDEF, asmDef.ToJsonString(outOpt) + "\n");
+        File.WriteAllText(targetAsmDefPath, asmDef.ToJsonString(outOpt) + "\n");
     }
 }
