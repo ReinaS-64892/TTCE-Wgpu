@@ -27,6 +27,9 @@ public static class SetTTTDependencyVersion
         var dependencies = packageJson["dependencies"];
         if (dependencies is null) { Console.WriteLine($"ttt dependency not found!"); throw new NullReferenceException(); }
         dependencies[ttcId] = ttcPackageJson["version"]?.GetValue<string>();
+        var vpmDependencies = packageJson["vpmDependencies"];
+        if (vpmDependencies is null) { Console.WriteLine($"ttt dependency not found!"); throw new NullReferenceException(); }
+        vpmDependencies[ttcId] = "^" + ttcPackageJson["version"]?.GetValue<string>();
 
         var outOpt = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.General);
         outOpt.WriteIndented = true;
