@@ -8,6 +8,7 @@ namespace net.rs64.TexTransCoreEngineForWgpu
 {
     public static class ShaderFinder
     {
+        const string INCLUDE_SAMPLER_TEMPLATE_LIEN = "#include \"SamplerTemplate.hlsl\"";
         public static ShaderDictionary RegisterShadersWithCurrentDirectory(this TTCEWgpuDevice device)
         {
             return RegisterShaders(device, GetAllShaderPathWithCurrentDirectory(), CurrentDirectoryFind);
@@ -50,13 +51,13 @@ namespace net.rs64.TexTransCoreEngineForWgpu
                         }
                     case TTComputeType.Sampler:
                         {
-                            var csCodeR = findTemplate("TextureResizingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
-                            var csCodeT = findTemplate("TransSamplingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
-                            var csCodeA = findTemplate("AtlasSamplingTemplate.hlsl").Replace("//$$$SAMPLER_CODE$$$", srcText);
+                            var csCodeR = findTemplate("TextureResizingTemplate.hlsl").Replace(INCLUDE_SAMPLER_TEMPLATE_LIEN, srcText);
+                            var csCodeT = findTemplate("TransSamplingTemplate.hlsl").Replace(INCLUDE_SAMPLER_TEMPLATE_LIEN, srcText);
+                            var csCodeA = findTemplate("AtlasSamplingTemplate.hlsl").Replace(INCLUDE_SAMPLER_TEMPLATE_LIEN, srcText);
                             var resizingKey = device.RegisterComputeShaderFromHLSL(path, csCodeR);
                             var transSamplerKey = device.RegisterComputeShaderFromHLSL(path, csCodeT);
                             var atlasSamplerKey = device.RegisterComputeShaderFromHLSL(path, csCodeA);
-                            specialShaderDicts[descriptions.ComputeType][computeName] = new SamplerKey(resizingKey, transSamplerKey,atlasSamplerKey);
+                            specialShaderDicts[descriptions.ComputeType][computeName] = new SamplerKey(resizingKey, transSamplerKey, atlasSamplerKey);
                             break;
                         }
                 }
